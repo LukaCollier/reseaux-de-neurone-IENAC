@@ -26,8 +26,8 @@ class Neurone:
         self.x=np.zeros(n)
         self.z=0
         self.a=0
-    def activation(self):
-        self.a =Relu(self.z)
+    def activation(self,f):
+        self.a =f(self.z)
         return self.a
     def zupdate(self,x):
         self.x = np.array(x, dtype=float)
@@ -83,10 +83,17 @@ class Reseaux_Neurone:
         self.y=y
         self.yf=yf
         self.dy=dy
-        #TODO
-        #réalisation des Layers
-        self.l=[Layer(n_inputs_init,np.random.randn(y))]
-        self.a=[self.l[0].f]
+        self.l=[]
+        self.a=[]
+        n_neurone=y
+        n_input=n_inputs_init
+        while n_neurone>yf:
+            biais=np.random.randn(n_neurone)
+            self.l.append(Layer(n_input,biais))
+            n_input=n_neurone
+            n_neurone -=dy
+        biais_final=np.random.randn(yf)
+        self.l.append(Layer(n_input,biais_final))
         
     def forward(self,x):
         #TODO
