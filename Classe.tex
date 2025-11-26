@@ -1,0 +1,76 @@
+% Exemple de fichier LaTeX pour une présentation de classes
+% Projet algorithmique
+
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{Présentation des Classes du Projet Réseau de Neurones}
+\author{Luka, Étienne, Darya, Camille}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Classe 1 : \texttt{Neurone}}
+\subsection*{Rôle}
+Classe permettant de décrire un neurone.
+
+\subsection*{Attributs}
+\begin{itemize}
+    \item $\omega$ : liste des poids du neurone
+    \item $n$ : cardinal de $\omega$
+    \item $b$ : biais
+    \item $x$ : tableau initialisé à 0 de taille $n$, permettant de stocker l'entrée
+    \item $z$ : résultat de $\omega^\top x + b$
+    \item $a$ : activation de $z$
+\end{itemize}
+
+\subsection*{Méthodes}
+\begin{itemize}
+    \item \texttt{zupdate()} : met à jour la valeur de $z$ en prenant $x$ comme paramètre
+    \item \texttt{bupdate()} : met à jour le biais
+    \item \texttt{activation()} : applique une fonction d'activation à $z$
+    \item \texttt{forward()} : applique \texttt{zupdate()} puis \texttt{activation()}
+\end{itemize}
+
+\section{Classe 2 : \texttt{Layer}}
+\subsection*{Rôle}
+Classe permettant de décrire une couche de neurones.
+
+\subsection*{Attributs}
+\begin{itemize}
+    \item \texttt{n\_inputs} : nombre d'entrées
+    \item \texttt{n\_neurones} : nombre de neurones
+    \item \texttt{tab} : tableau d'objets \texttt{Neurone}
+    \item \texttt{f} : tableau des sorties des neurones
+\end{itemize}
+
+\subsection*{Méthodes}
+\begin{itemize}
+    \item \texttt{forward()} : applique la méthode \texttt{forward()} sur chaque neurone de la couche 
+\end{itemize}
+
+\section{Classe 3 : \texttt{Reseau\_Neurones}}
+\subsection*{Rôle}
+Classe permettant de décrire un réseau de neurones.
+
+\subsection*{Attributs}
+\begin{itemize}
+    \item \texttt{l} : tableau de \texttt{Layer}
+    \item \texttt{a} : tableau de tableaux contenant les activations de chaque couche
+    \item \texttt{nb\_l} : nombre de couches
+\end{itemize}
+
+\subsection*{Méthodes}
+\begin{itemize}
+    \item \texttt{forward()} : procède à l'activation de l'ensemble des neurones du réseau de neurones
+\end{itemize}
+
+\end{document}
