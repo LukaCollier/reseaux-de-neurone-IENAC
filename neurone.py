@@ -13,7 +13,7 @@ def Tanh(x):
 class Neurone:
     '''
     n : |w|
-    b : |biais|
+    b : biais
     w : liste de poids associée au neurone
     x : entrée
     z = (w)Tx+b
@@ -33,9 +33,9 @@ class Neurone:
         self.x = np.array(x, dtype=float)
         self.z=np.dot(self.w,self.x)+self.b
     
-    def forward(self,x):
+    def forward(self,x,f):
         self.zupdate(x)
-        return self.activation()
+        return self.activation(f)
     def bupdate(self,b):
         self.b=b
     def __repr__(self):
@@ -57,9 +57,9 @@ class Layer:
         self.tab=[Neurone(n_inputs,i) for i in b]
         self.f=[]
         
-    def forward(self,x):
-        self.f=[i.forward(x) for i in self.tab]
-        return self.f
+    def forward(self,x,f):
+        self.f=[i.forward(x,f) for i in self.tab]
+        return np.array(self.f)
     
     def __repr__(self):
         txt = ""
@@ -69,35 +69,33 @@ class Layer:
     
 
 class Reseaux_Neurone:
-    def __init__(self,y,yf,dy,n_inputs_init):
+    def __init__(self,n_inputs_init,nb_n_l):
         '''
-        x  : nb layer du réseaux
+        nbl  : nb layer du réseaux
         y  : nb neurones sur la couche la plus basse
         yf : nb neurones sur la couche finale
         dy : y-n*dy = nb neurones sur la n-ième couche
         n_inputs_init : inputs initiaux
         a : liste de liste de l'activation de chaque couche
-        l : liste de Layer 
+        l : liste de Layer
+        nb_n_l: liste du nombre de neuronne sur chaque couche
+        
+        NOTA : y ,yf,dy obsolète mais nécessite la création de nb_n_l avant
         '''
-        self.x=0
-        self.y=y
-        self.yf=yf
-        self.dy=dy
         self.l=[]
         self.a=[]
-        n_neurone=y
+        self.nbl=len(nb_n_l)
         n_input=n_inputs_init
-        while n_neurone>yf:
-            biais=np.random.randn(n_neurone)
+        for nb_n in nb_n_l:
+            biais=np.random.randn(nb_n)
             self.l.append(Layer(n_input,biais))
-            n_input=n_neurone
-            n_neurone -=dy
-        biais_final=np.random.randn(yf)
-        self.l.append(Layer(n_input,biais_final))
+            n_input=nb_n
         
     def forward(self,x):
-        #TODO
-        #mis à jour de chaque couche pour faciliter la modification des biais et poids
-        pass
-            
+        self.a=[]
+        entry=x
+        for lay in self.l:
+            lay.forward(entry,LeakyRelu)
+            entry=lay.f
+        return entry
         
