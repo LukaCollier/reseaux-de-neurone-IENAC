@@ -26,6 +26,9 @@ class Neurone:
         self.x=np.zeros(n)
         self.z=0
         self.a=0
+        self.db=0
+        self.dw=np.zeros(n)
+        self.delta=0
     def activation(self,f):
         self.a =f(self.z)
         return self.a
@@ -38,6 +41,8 @@ class Neurone:
         return self.activation(f)
     def bupdate(self,b):
         self.b=b
+    def wupdate(self,nw):
+        self.w=nw
     def __repr__(self):
         return f" Poids du neurone {self.w} \n Entrée: {self.x} \n biais :{self.b} \n z={self.z}"
    
@@ -60,7 +65,8 @@ class Layer:
     def forward(self,x,f):
         self.f=[i.forward(x,f) for i in self.tab]
         return np.array(self.f)
-    
+    def weight_matrix(self):
+        return np.array([neu.w for neu in self.tab])
     def __repr__(self):
         txt = ""
         for i, neurone in enumerate(self.tab):
@@ -84,6 +90,7 @@ class Reseaux_Neurone:
         '''
         self.l=[]
         self.a=[]
+        self.delta=None
         self.nbl=len(nb_n_l)
         n_input=n_inputs_init
         for nb_n in nb_n_l:
@@ -98,4 +105,37 @@ class Reseaux_Neurone:
             lay.forward(entry,LeakyRelu)
             entry=lay.f
         return entry
-        
+    def MSE(self,y_pred,y):
+        return 0.5*np.sum((y_pred-y)**2)
+    def backward(self,x,y,lr,dactiv):
+        '''
+        x : donnée d'entrée étant dans l'apprentissage
+        y : résultat attendu possiblement |y|> 1 si plusieur neurones sur la couche la plus haute
+        lr : pas de déplacement des poids et biais
+        dactiv : dérivé de la fonction d'acitvation
+        Principe d'abord calcul delta pour la dernière couche car ne peut être mis dans une boucle récursive puis itéré jusqu'a la première couche
+        '''
+    y_pred = self.forward(x)
+    y = np.array(y, dtype=float)
+    L = self.nbl - 1
+    for j, neu in enumerate(self.l[L].tab):
+        neu.delta = (neu.a - y[j]) * dactiv(neu.z)
+    for l in range(L - 1, -1, -1):
+        current_layer = self.l[l]
+        next_layer = self.l[l + 1]
+
+        for j, neu in enumerate(current_layer.tab):
+            s = 0
+            for next_neu in next_layer.tab:
+                s += next_neu.w[j] * next_neu.delta
+
+            neu.delta = s * dactiv(neu.z)
+    for layer in self.l:
+        for neu in layer.tab:
+            neu.dw = neu.delta * neu.x
+            neu.db = neu.delta
+
+            neu.w -= lr * neu.dw
+            neu.b -= lr * neu.db
+
+    return y_pred   
