@@ -3,7 +3,7 @@
 
 ## Logo du Projet
 
-<img src="logo_Reseaux_Neurone.png" width="48" alt="Logo Réseau de Neurones ENAC">
+<img src="logo_Reseaux_Neurone.png" width="256" alt="Logo Réseau de Neurones ENAC">
 
 ## Description
 
