@@ -1,8 +1,9 @@
 # ✈️ Projet de Réseau de Neurones ENAC
 
+
 ## Logo du Projet
 
-![Logo Réseau de Neurones ENAC](logo_Reseaux_Neurone.png)
+<img src="logo_Reseaux_Neurone.png" width="48" alt="Logo Réseau de Neurones ENAC">
 
 ## Description
 
