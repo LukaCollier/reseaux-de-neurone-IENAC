@@ -39,8 +39,8 @@ class Neural_Network:
         self.a=[]
         self.nbl=len(nb_n_l)
         n_input=n_input_init
-        for nb_n in nb_n_l:
-            self.l.append(Layer(n_input,nb_n,activ))
+        for i,nb_n in enumerate(nb_n_l):
+            self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
     def forward(self,x):
         self.a=[x]

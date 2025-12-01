@@ -7,7 +7,8 @@ Problème de régression reprennant les paramètres de l'exemple du pdf
 
 '''
 activ_tanh = Activation.ActivationF.tanh()
-network=neuroneopti.Neural_Network(1,[16,16,1],activ_tanh)
+activ_leaky_relu = Activation.ActivationF.leaky_relu()
+network=neuroneopti.Neural_Network(1,[16,16,1],[activ_tanh,activ_leaky_relu,activ_tanh])
 
 
 '''
