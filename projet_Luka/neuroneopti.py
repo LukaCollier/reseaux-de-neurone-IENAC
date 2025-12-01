@@ -43,7 +43,7 @@ class Neural_Network:
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
     def forward(self,x):
-        self.a=[x]
+        self.a = [np.array(x)] #self.a=[x]
         for neu in self.l:
             x=neu.forward(x)
             self.a.append(x)
@@ -78,6 +78,7 @@ class Neural_Network:
             neu.biais-=lr*delta[i]
         return y_pred
     
+
 
 
          
