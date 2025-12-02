@@ -11,6 +11,8 @@ class Layer:
     z : résultat de Wx+b
     f : fonction d'activation sur des vecteurs
     '''
+
+    
     def __init__(self,n_input,n_neurone,activ):
         self.n_input=n_input
         self.n_neurone=n_neurone
@@ -20,7 +22,9 @@ class Layer:
         self.z=np.zeros(n_neurone)
         self.f=np.zeros(n_neurone)
         self.activ=activ
-    
+
+
+
     def forward(self, x):
         # x est de shape: (n_input,) ou (n_input, batch_size)
         self.x = np.array(x)
@@ -33,7 +37,9 @@ class Layer:
         self.z = self.w @ self.x + self.biais.reshape(-1, 1)
         self.f = self.activ.function(self.z)
         return self.f
-    
+
+
+
     def update(self,lr,g_w,g_b):
         self.w -= lr*g_w
         self.biais -= lr*g_b
@@ -45,8 +51,18 @@ class Neural_Network:
     l:tableau de layer
     a:tableau des activation avec a[0] qui est l'entrée
     nbl:nombre de layer
-    '''
+    activ: tableau des fonctions d'activations correspondant à chaque layer (à changer plus tard pour faire plus propre)
+    ''' 
+
+
     def __init__(self,n_input_init,nb_n_l,activ):
+        '''
+        Mémo isinstance vérifie que activ est bien du même type que l'objet
+        '''
+        if isinstance(activ, Activation.ActivationF): #Permet d'éviter de devoir répéter à chaque fois l'activation pour un réseaux avec une unique activation
+            activ = [activ] * len(nb_n_l)
+        else:
+            assert len(activ) == len(nb_n_l)         #Vérifie qu'il y a suffisament d'activation que de layers
         self.l=[]
         self.a=[]
         self.nbl=len(nb_n_l)
@@ -55,7 +71,9 @@ class Neural_Network:
         for i,nb_n in enumerate(nb_n_l):
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
-            
+
+
+
     def forward(self,x):
         x = np.array(x)
         if x.ndim == 1:
@@ -66,10 +84,14 @@ class Neural_Network:
             x=neu.forward(x)
             self.a.append(x)
         return x
-    
+
+
+
     def MSE(self,y_pred,y):
         return 0.5*np.sum((y_pred-y)**2)
-        
+
+
+
     def backward(self,y,lr):
         '''
         y : résultat attendu possiblement |y|> 1 si plusieurs neurones sur la couche la plus haute
