@@ -51,6 +51,7 @@ class Neural_Network:
         self.a=[]
         self.nbl=len(nb_n_l)
         n_input=n_input_init
+        self.train_losses = []
         for i,nb_n in enumerate(nb_n_l):
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
@@ -101,5 +102,36 @@ class Neural_Network:
             grad_b = np.sum(delta[i], axis=1) #permet d'éviter les problèmes et de perdre 1H X)
             neu.update(lr,grad_w,grad_b)
         return y_pred
-    def train_loss(self):
-        pass
+    
+    
+    def train_loss(self,epoch_loss, num_batches):
+        train_loss = epoch_loss / num_batches
+        self.train_losses.append(train_loss)
+    
+    def train(self, x_train, y_train, epochs, lr, batch_size):
+        Nb_v_entr = x_train.shape[0]
+        for k in range(epochs):
+            if k % 100 == 0:
+                print(f"Epoch {k}/{epochs}")
+            
+            # Mélanger les données à chaque epoch
+            indices = np.random.permutation(Nb_v_entr)
+            epoch_loss = 0
+            num_batches = 0
+            # Parcourir par mini-batches
+            for i in range(0, Nb_v_entr, batch_size):
+                # Extraire le batch
+                #calcul de l'indice de fin du batch
+                end_idx = min(i + batch_size, Nb_v_entr)
+                batch_indices = indices[i:end_idx]
+                x_batch = x_train[batch_indices]
+                y_batch = y_train[batch_indices]
+                # Forward et backward sur le batch
+                self.forward(x_batch)
+                self.backward(y_batch, lr)
+                # Calculer la perte pour ce batch
+                epoch_loss += self.MSE(self.a[-1].reshape(1,-1), y_batch.reshape(1, -1))
+                num_batches += 1
+            
+            # Perte moyenne d'entraînement pour cette epoch
+            self.train_loss(epoch_loss, num_batches)
