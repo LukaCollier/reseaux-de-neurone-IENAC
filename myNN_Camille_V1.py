@@ -1,5 +1,9 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+os.chdir(r"c:\Users\camil\Documents\NN")
+print("Répertoire courant :", os.getcwd())
 
 class Layer :
 
@@ -13,16 +17,17 @@ class Layer :
         self.z=None
         self.a=None
 
-    def forward(self,x):
+    def forward(self,x):# x shape : (input_size, batch_size)
         self.z=np.dot(self.weights,x) + self.biases
         self.a=self.activation(self.z)
         self.x=x
         return self.a
 
     def backward(self,delta_next,learning_rate):
+        batch_size = delta_next.shape[1]
         dz = delta_next * self.activation.derivative(self.z)
-        dW = np.dot(dz, self.x.T)
-        db=dz
+        dW = np.dot(dz, self.x.T)/batch_size
+        db = np.mean(dz, axis=1, keepdims=True)
         delta_prev = np.dot(self.weights.T, dz)
         self.weights -= learning_rate * dW
         self.biases -= learning_rate * db
@@ -42,6 +47,37 @@ class NeuralNetwork:
         delta = loss_fn.derivative(self.layers[-1].a, y)
         for layer in reversed(self.layers):
             delta = layer.backward(delta, learning_rate)
+
+    def train(self, X, Y, epochs, batch_size, learning_rate, loss_fn,X_train,X_val,X_test,Y_train,Y_val,Y_test):
+        train_errors = []
+        val_errors = []
+        test_errors = []
+        n_samples = X.shape[1]
+        for epoch in range(epochs):
+            permutation = np.random.permutation(n_samples)
+            X_shuffled = X[:, permutation]
+            Y_shuffled = Y[:, permutation]
+
+            for i in range(0, n_samples, batch_size):
+                X_batch = X_shuffled[:, i:i+batch_size]
+                Y_batch = Y_shuffled[:, i:i+batch_size]
+                y_pred = self.forward(X_batch)
+                self.backward(Y_batch, learning_rate, loss_fn)
+
+            train_pred = self.forward(X_train)
+            val_pred = self.forward(X_val)
+            test_pred = self.forward(X_test)
+
+            train_error = np.mean(loss_fn(train_pred, Y_train))
+            val_error = np.mean(loss_fn(val_pred, Y_val))
+            test_error = np.mean(loss_fn(test_pred, Y_test))
+
+            train_errors.append(train_error)
+            val_errors.append(val_error)
+            test_errors.append(test_error)
+
+        print("Training complete.")        
+        return train_errors, val_errors, test_errors
 
 
 class ActivationFunction:
@@ -89,18 +125,67 @@ class ErrorFunction:
             derivative= lambda   ypred,ytrue:ypred-ytrue
         )
     
-#mon exemple
-tanh = ActivationFunction.Tanh()
-layer1=Layer(3,4,tanh)
-layer2=Layer(4,3,tanh)    
+def plot_errors(train_errors, val_errors, test_errors):
+    epochs = range(1, len(train_errors) + 1)
+    plt.figure(figsize=(10,6))
+    plt.plot(epochs, train_errors, marker='o', label='Train Error')
+    plt.plot(epochs, val_errors, marker='s', label='Validation Error')
+    plt.plot(epochs, test_errors, marker='^', label='Test Error')
+    plt.title("Évolution des erreurs pendant l'entraînement")
+    plt.xlabel("Epoch")
+    plt.ylabel("Erreur (MSE)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+#my example 
+
+data = pd.read_csv("boston.csv")
+
+X = data.drop(columns=['MEDV']).values.T       #on enlève le prix à prédire = Y
+Y = data['MEDV'].values.reshape(1, -1)        
+
+# Normalisation des features
+X = X / X.max(axis=1, keepdims=True)
+
+# 2️ Séparer train / validation / test
+from sklearn.model_selection import train_test_split
+
+# Séparer train+val / test
+X_temp, X_test, Y_temp, Y_test = train_test_split(X.T, Y.T, test_size=0.2, random_state=42)
+
+# Séparer train / validation
+X_train, X_val, Y_train, Y_val = train_test_split(X_temp, Y_temp, test_size=0.25, random_state=42)  # 0.25*0.8=0.2
+
+# Transposer pour correspondre au format attendu par NN
+X_train = X_train.T
+X_val = X_val.T
+X_test = X_test.T
+Y_train = Y_train.T
+Y_val = Y_val.T
+Y_test = Y_test.T
+
+
+identity = ActivationFunction(
+    function=lambda x: x,
+    derivative=lambda x: np.ones_like(x)
+)
+
+
+nn = NeuralNetwork([
+    Layer(input_size=X_train.shape[0], output_size=10, activation=ActivationFunction.ReLU()),
+    Layer(input_size=10, output_size=1, activation=identity)
+])
+
+
 loss_fn = ErrorFunction.MSE()
 
-NN=NeuralNetwork([layer1,layer2])
-x = np.random.randn(3, 1)
-y = np.array([[1],[0],[1]])
-print("Sortie du reseau avant entrainement :", NN.forward(x))
-learning_rate = 0.01
-for i in range(100000):
-    NN.forward(x)
-    NN.backward(y, learning_rate, loss_fn)
-print("Sortie du reseau apres entrainement :", NN.forward(x) )
+# Entraînement
+train_err, val_err, test_err = nn.train(
+    X_train, Y_train, epochs=100, batch_size=16, learning_rate=0.01,
+    loss_fn=loss_fn,
+    X_train=X_train, X_val=X_val, X_test=X_test,
+    Y_train=Y_train, Y_val=Y_val, Y_test=Y_test
+)
+
+plot_errors(train_err, val_err, test_err)
