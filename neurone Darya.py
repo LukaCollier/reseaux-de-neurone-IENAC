@@ -119,7 +119,7 @@ class Réseauneurone:
 
 
 
-### exemple pour tracé graphe d'erreurs 
+### exemple/ modèle à améliorer/modifier pour tracé graphe d'erreurs 
 def train_regression(reseau, X, y, epochs=100, batch_size=32, lr=0.001, validation_split=0.2):
     # séparer apprentissage / validation
     """X = les entrées du réseau (features)
@@ -184,3 +184,4 @@ plt.legend()
 plt.show()
 
 print("Meilleur epoch :", np.argmin(val_loss) + 1)
+
