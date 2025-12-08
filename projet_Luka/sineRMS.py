@@ -15,11 +15,11 @@ activ_leaky_relu = Activation.ActivationF.leaky_relu()
 network = Neurone.Neural_Network(1, [8, 8, 1], activ_tanh)
 
 '''
-Entrainement avec ADAM
+Entrainement avec RMSProp
 '''
 Nb_v_entr = 2000
 Epoch = 500
-lr = 1e-3  # Learning rate généralement plus petit pour ADAM (1e-3 au lieu de 1e-2)
+lr = 1e-3  # Learning rate généralement plus petit pour RMSProp (1e-3 au lieu de 1e-2)
 batch_size = 16
 
 # Génération des données d'entraînement
@@ -27,11 +27,12 @@ v_entr = np.random.uniform(0, 2*np.pi, Nb_v_entr)
 res_th = np.sin(v_entr)
 
 # Génération des données de validation
+
 Nb_v_val = 500
 v_val = np.random.uniform(0, 2*np.pi, Nb_v_val)
 res_val = np.sin(v_val)
 # CHANGEMENT PRINCIPAL: train_ADAM au lieu de train_SGD
-network.train_ADAM(v_entr, res_th, Epoch, lr, batch_size, v_val, res_val)
+network.train_RMS(v_entr, res_th, Epoch, lr, batch_size, v_val, res_val)
 
 train_losses = network.train_losses
 
@@ -71,6 +72,7 @@ plt.grid(True, alpha=0.3)
 
 plt.tight_layout()
 plt.show()
+
 # Afficher la loss finale
 print(f"\nLoss finale: {train_losses[-1]:.6f}")
 print(f"Erreur moyenne absolue: {np.mean(np.abs(res_test - res_nn_test)):.6f}")

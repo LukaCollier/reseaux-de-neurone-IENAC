@@ -101,6 +101,7 @@ class Neural_Network:
         self.nbl=len(nb_n_l)
         n_input=n_input_init
         self.train_losses = []
+        self.val_losses=[]
         for i,nb_n in enumerate(nb_n_l):
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
@@ -231,7 +232,7 @@ class Neural_Network:
 
 
 
-    def train_SGD(self, x_train, y_train, epochs, lr, batch_size):
+    def train_SGD(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
             if k % 100 == 0:
@@ -258,8 +259,51 @@ class Neural_Network:
             
             # Perte moyenne d'entraînement pour cette epoch
             self.train_loss(epoch_loss, num_batches)
+            if x_val is not None and y_val is not None:
+                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                self.val_losses.append(val_loss)
+                if k % 100 == 0:
+                    print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
-    def train_ADAM(self, x_train, y_train, epochs, lr, batch_size):
+
+
+
+    def train_RMS(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
+        Nb_v_entr = x_train.shape[0]
+        for k in range(epochs):
+            if k % 100 == 0:
+                print(f"Epoch {k}/{epochs}")
+            
+            # Mélanger les données à chaque epoch
+            indices = np.random.permutation(Nb_v_entr)
+            epoch_loss = 0
+            num_batches = 0
+            # Parcourir par mini-batches
+            for i in range(0, Nb_v_entr, batch_size):
+                # Extraire le batch
+                #calcul de l'indice de fin du batch
+                end_idx = min(i + batch_size, Nb_v_entr)
+                batch_indices = indices[i:end_idx]
+                x_batch = x_train[batch_indices]
+                y_batch = y_train[batch_indices]
+                # Forward et backward sur le batch
+                self.forward(x_batch)
+                self.RMS(y_batch, lr)
+                # Calculer la perte pour ce batch
+                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                num_batches += 1
+            
+            # Perte moyenne d'entraînement pour cette epoch
+            self.train_loss(epoch_loss, num_batches)
+            if x_val is not None and y_val is not None:
+                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                self.val_losses.append(val_loss)
+                if k % 100 == 0:
+                    print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
+
+
+
+    def train_ADAM(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
             if k % 100 == 0:
@@ -286,3 +330,9 @@ class Neural_Network:
             
             # Perte moyenne d'entraînement pour cette epoch
             self.train_loss(epoch_loss, num_batches)
+            if x_val is not None and y_val is not None:
+                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                self.val_losses.append(val_loss)
+                if k % 100 == 0:
+                    print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
+            

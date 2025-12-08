@@ -19,36 +19,47 @@ Epoch=500 #au lieu de 2000
 lr=1e-2
 v_entr=np.random.uniform(0,2*np.pi,Nb_v_entr)
 res_th=np.sin(v_entr)
-network.train_SGD(v_entr,res_th,Epoch,lr, batch_size=16) #entrainement par batch de taille 16 attention ne pas reshape l'entrée
+
+# Génération des données de validation
+Nb_v_val = 500
+v_val = np.random.uniform(0, 2*np.pi, Nb_v_val)
+res_val = np.sin(v_val)
+
+network.train_SGD(v_entr,res_th,Epoch,lr, batch_size=16, x_val=v_val, y_val=res_val) #entrainement par batch de taille 16 attention ne pas reshape l'entrée
 train_losses = network.train_losses
 
 # Tracer la courbe de perte
-plt.figure(figsize=(12, 5))
+plt.figure(figsize=(15, 5))
 
-plt.subplot(1, 2, 1)
-plt.plot(train_losses, label='Train Loss (SGD)', color='blue', linewidth=2)
+
+# Graphique 1: Courbes de perte
+plt.subplot(1, 3, 1)
+plt.plot(network.train_losses, label='Train Loss', color='blue', linewidth=2)
+plt.plot(network.val_losses, label='Validation Loss', color='red', linewidth=2)
 plt.xlabel('Epoch')
 plt.ylabel('Loss (MSE)')
-plt.title('Courbe de perte pendant l\'entraînement (SGD)')
+plt.title('Courbes de perte (ADAM)')
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.yscale('log')
 
-'''
-Création du test de vérification
-'''
-x_test = np.random.uniform(0, 2*np.pi, 2000)
-res_test = np.sin(x_test)
-res_nn_test = np.array([network.forward([x])[0] for x in x_test])
-
-# Graphique de comparaison
-plt.subplot(1, 2, 2)
-plt.plot(x_test, res_test, 'o', label="np.sin", color="blue", markersize=2, alpha=0.5)
-plt.plot(x_test, res_nn_test, 'o', label="NeuralNetwork (SGD)", color="red", markersize=2, alpha=0.5)
+# Graphique 2: Comparaison sur données de validation
+plt.subplot(1, 3, 2)
+val_pred = np.array([network.forward([x])[0] for x in v_val])
+plt.plot(v_val, res_val, 'o', label="np.sin", color="blue", markersize=4, alpha=0.5)
+plt.plot(v_val, val_pred, 'o', label="Neural Network", color="red", markersize=4, alpha=0.5)
 plt.xlabel('x')
 plt.ylabel('y')
-plt.title('Comparaison sin(x) vs Neural Network')
+plt.title('Validation: sin(x) vs Neural Network')
 plt.legend()
+plt.grid(True, alpha=0.3)
+# Graphique 3: Distribution des erreurs
+plt.subplot(1, 3, 3)
+errors = np.abs(res_val - val_pred).flatten()  # S'assurer que c'est un tableau 1D
+plt.hist(errors, bins=30, color='purple', alpha=0.7, edgecolor='black')
+plt.xlabel('Erreur absolue')
+plt.ylabel('Fréquence')
+plt.title('Distribution des erreurs de validation')
 plt.grid(True, alpha=0.3)
 
 plt.tight_layout()
