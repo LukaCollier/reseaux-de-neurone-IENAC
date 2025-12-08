@@ -33,12 +33,12 @@ class Layer:
 
 
     def forward(self, x):
-        # x est de shape: (n_input,) ou (n_input, batch_size)
+        # x doit être de shape: (n_input, batch_size) ou (n_input, 1)
         self.x = np.array(x)
         
-        # Si x est (n_input,)
+        # Si x est 1D (n_input,), le transformer en (n_input, 1)
         if self.x.ndim == 1:
-            self.x = self.x.reshape(1, -1)
+            self.x = self.x.reshape(-1, 1)
         
         # z = W @ x + b (broadcast le biais)
         self.z = self.w @ self.x + self.biais.reshape(-1, 1)
@@ -112,8 +112,11 @@ class Neural_Network:
 
     def forward(self,x):
         x = np.array(x)
+        # Convertir x en format (n_input, batch_size)
         if x.ndim == 1:
-            x = x.reshape(1, -1)
+            x = x.reshape(-1, 1)  # (n_input, 1)
+        else:
+            x = x.T  # (batch_size, n_input) -> (n_input, batch_size)
         
         self.a = [x]
         for neu in self.l:
@@ -135,8 +138,11 @@ class Neural_Network:
         Principe d'abord calcul delta pour la dernière couche car ne peut être mis dans une boucle récursive puis itéré jusqu'à la première couche
         '''
         y = np.array(y, dtype=float)
+        # Convertir y en format (n_output, batch_size)
         if y.ndim == 1:
-            y = y.reshape(1, -1)
+            y = y.reshape(-1, 1)  # (n_output, 1)
+        else:
+            y = y.T  # (batch_size, n_output) -> (n_output, batch_size)
         
         y_pred=self.a[-1]
         L = self.nbl - 1
@@ -164,8 +170,11 @@ class Neural_Network:
 
     def RMS(self, y, lr):
         y = np.array(y, dtype=float)
+        # Convertir y en format (n_output, batch_size)
         if y.ndim == 1:
-            y = y.reshape(1, -1)
+            y = y.reshape(-1, 1)  # (n_output, 1)
+        else:
+            y = y.T  # (batch_size, n_output) -> (n_output, batch_size)
         
         y_pred = self.a[-1]
         L = self.nbl - 1
@@ -193,8 +202,11 @@ class Neural_Network:
 
     def ADAM(self,y,lr):
         y = np.array(y, dtype=float)
+        # Convertir y en format (n_output, batch_size)
         if y.ndim == 1:
-            y = y.reshape(1, -1)
+            y = y.reshape(-1, 1)  # (n_output, 1)
+        else:
+            y = y.T  # (batch_size, n_output) -> (n_output, batch_size)
         
         y_pred=self.a[-1]
         L = self.nbl - 1
@@ -226,7 +238,13 @@ class Neural_Network:
         self.train_losses.append(train_loss)
     
     def evaluate(self, x_test, y_test):
-        y_pred = self.forward(x_test)
+        y_pred = self.forward(x_test)  # y_pred aura shape (n_output, n_samples)
+        # Convertir y_test en format (n_output, n_samples)
+        y_test = np.array(y_test)
+        if y_test.ndim == 1:
+            y_test = y_test.reshape(-1, 1)
+        else:
+            y_test = y_test.T  # (n_samples, n_output) -> (n_output, n_samples)
         loss = self.MSE(y_pred, y_test)
         return loss
 
@@ -260,7 +278,7 @@ class Neural_Network:
             # Perte moyenne d'entraînement pour cette epoch
             self.train_loss(epoch_loss, num_batches)
             if x_val is not None and y_val is not None:
-                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
                 if k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
@@ -296,7 +314,7 @@ class Neural_Network:
             # Perte moyenne d'entraînement pour cette epoch
             self.train_loss(epoch_loss, num_batches)
             if x_val is not None and y_val is not None:
-                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
                 if k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
@@ -331,7 +349,7 @@ class Neural_Network:
             # Perte moyenne d'entraînement pour cette epoch
             self.train_loss(epoch_loss, num_batches)
             if x_val is not None and y_val is not None:
-                val_loss = self.evaluate(x_val, y_val.T if y_val.ndim == 1 else y_val)
+                val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
                 if k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
