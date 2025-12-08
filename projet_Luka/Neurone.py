@@ -148,6 +148,9 @@ class Neural_Network:
             neu.update(lr,grad_w,grad_b)
         return y_pred
     
+
+    def RMS(self,y,lr):
+        pass
     
 
     def ADAM(self,y,lr):
