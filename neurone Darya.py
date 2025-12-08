@@ -115,3 +115,73 @@ class Réseauneurone:
     
     ##renvoie le gradient de la couche d'entrée
 
+
+
+
+
+### exemple/ modèle à améliorer/modifier pour tracé graphe d'erreurs 
+def train_regression(reseau, X, y, epochs=100, batch_size=32, lr=0.001, validation_split=0.2):
+    # séparer apprentissage / validation
+    """X = les entrées du réseau (features)
+        y = la valeur à prédire (target)"""
+    
+    n = len(X)
+    n_val = int(n * validation_split)  ##combien d’échantillons iront dans la validation.
+
+    X_val, y_val = X[:n_val], y[:n_val]
+    X_train, y_train = X[n_val:], y[n_val:]
+
+    loss_history = []  ##va stocker la valeur de la loss sur le jeu d’entraînement à chaque epoch.
+    val_loss_history = [] ##Même principe, pour le jeu de validation.
+
+    for epoch in range(epochs):
+
+        # Shuffle
+        indices = np.random.permutation(len(X_train))
+        X_train = X_train[indices] ##On réordonne les échantillons d’après la permutation indices.
+        y_train = y_train[indices] 
+        ##mélange X et y de manière cohérente pour que chaque entrée corresponde toujours à sa cible.
+
+        # Boucle batchs
+        for i in range(0, len(X_train), batch_size):
+            xb = X_train[i:i+batch_size]  ##les entrées du batch
+            yb = y_train[i:i+batch_size]  ##les sorties correspondantes
+
+            for x_i, y_i in zip(xb, yb): 
+                ##parcourir simultanément chaque entrée x_i et sa cible y_i dans le batch.
+                y_pred = reseau.forward(x_i) 
+                ##résultat final y_pred = prédiction du réseau pour cet échantillon
+
+                # Gradient MSE
+                grad = (y_pred - y_i)
+
+                reseau.backward(grad, lr)
+
+        # Perte globale entraînement
+        preds_train = np.array([reseau.forward(x) for x in X_train])
+        loss_train = np.mean(0.5 * (preds_train - y_train)**2)
+        loss_history.append(loss_train)
+
+        # Perte validation
+        preds_val = np.array([reseau.forward(x) for x in X_val])
+        loss_val = np.mean(0.5 * (preds_val - y_val)**2)
+        val_loss_history.append(loss_val)
+
+        print(f"Epoch {epoch+1}/{epochs} - loss={loss_train:.4f} - val_loss={loss_val:.4f}")
+
+    return loss_history, val_loss_history
+
+
+
+loss, val_loss = train_regression(reseau, X, y, 100, 32, 0.001,0.2)
+
+plt.plot(range(1, len(loss)+1), loss, label="Apprentissage")
+plt.plot(range(1, len(val_loss)+1), val_loss, label="Validation")
+plt.axhline(y=min(val_loss), color="k", linestyle="dashed")
+plt.xlabel("Epochs")
+plt.ylabel("Loss (MSE)")
+plt.legend()
+plt.show()
+
+print("Meilleur epoch :", np.argmin(val_loss) + 1)
+
