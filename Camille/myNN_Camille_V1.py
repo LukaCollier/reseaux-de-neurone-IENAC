@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-os.chdir(r"c:\Users\camil\Documents\NN")
-print("Répertoire courant :", os.getcwd())
+from sklearn.model_selection import train_test_split
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
+
 
 class Layer :
 
@@ -48,15 +50,15 @@ class NeuralNetwork:
         for layer in reversed(self.layers):
             delta = layer.backward(delta, learning_rate)
 
-    def train(self, X, Y, epochs, batch_size, learning_rate, loss_fn,X_train,X_val,X_test,Y_train,Y_val,Y_test):
+    def train(self, X_train, Y_train, X_val, Y_val, X_test, Y_test, epochs, batch_size, learning_rate, loss_fn):
         train_errors = []
         val_errors = []
         test_errors = []
-        n_samples = X.shape[1]
+        n_samples = X_train.shape[1]
         for epoch in range(epochs):
             permutation = np.random.permutation(n_samples)
-            X_shuffled = X[:, permutation]
-            Y_shuffled = Y[:, permutation]
+            X_shuffled = X_train[:, permutation]
+            Y_shuffled = Y_train[:, permutation]
 
             for i in range(0, n_samples, batch_size):
                 X_batch = X_shuffled[:, i:i+batch_size]
@@ -125,19 +127,70 @@ class ErrorFunction:
             derivative= lambda   ypred,ytrue:ypred-ytrue
         )
     
-def plot_errors(train_errors, val_errors, test_errors):
+def plot_errors(train_errors, val_errors):
     epochs = range(1, len(train_errors) + 1)
     plt.figure(figsize=(10,6))
-    plt.plot(epochs, train_errors, marker='o', label='Train Error')
-    plt.plot(epochs, val_errors, marker='s', label='Validation Error')
-    plt.plot(epochs, test_errors, marker='^', label='Test Error')
+    plt.plot(epochs, train_errors, marker='+', label='Train Error')
+    plt.plot(epochs, val_errors, marker='+', label='Validation Error')
     plt.title("Évolution des erreurs pendant l'entraînement")
     plt.xlabel("Epoch")
     plt.ylabel("Erreur (MSE)")
     plt.grid(True)
     plt.legend()
     plt.show()
-
+def plot_predictions(nn, X_train, Y_train, X_val, Y_val, X_test, Y_test, Y_mean, Y_std):
+    """Affiche prédictions vs vraies valeurs pour train, val et test"""
+    
+    # Prédictions normalisées
+    train_pred_norm = nn.forward(X_train)
+    val_pred_norm = nn.forward(X_val)
+    test_pred_norm = nn.forward(X_test)
+    
+    # Dénormalisation
+    train_pred = train_pred_norm * Y_std + Y_mean
+    train_true = Y_train * Y_std + Y_mean
+    
+    val_pred = val_pred_norm * Y_std + Y_mean
+    val_true = Y_val * Y_std + Y_mean
+    
+    test_pred = test_pred_norm * Y_std + Y_mean
+    test_true = Y_test * Y_std + Y_mean
+    
+    # Plot
+    plt.figure(figsize=(15, 4))
+    
+    # Train
+    plt.subplot(1, 3, 1)
+    plt.scatter(train_true.flatten(), train_pred.flatten(), alpha=0.6)
+    plt.plot([train_true.min(), train_true.max()], 
+             [train_true.min(), train_true.max()], 'r--', lw=2)
+    plt.xlabel("Vraies valeurs")
+    plt.ylabel("Prédictions")
+    plt.title("Train - Prédictions vs Réalité")
+    plt.grid(True, alpha=0.3)
+    
+    # Validation
+    plt.subplot(1, 3, 2)
+    plt.scatter(val_true.flatten(), val_pred.flatten(), alpha=0.6, color='orange')
+    plt.plot([val_true.min(), val_true.max()], 
+             [val_true.min(), val_true.max()], 'r--', lw=2)
+    plt.xlabel("Vraies valeurs")
+    plt.ylabel("Prédictions")
+    plt.title("Validation - Prédictions vs Réalité")
+    plt.grid(True, alpha=0.3)
+    
+    # Test
+    plt.subplot(1, 3, 3)
+    plt.scatter(test_true.flatten(), test_pred.flatten(), alpha=0.6, color='green')
+    plt.plot([test_true.min(), test_true.max()], 
+             [test_true.min(), test_true.max()], 'r--', lw=2)
+    plt.xlabel("Vraies valeurs")
+    plt.ylabel("Prédictions")
+    plt.title("Test - Prédictions vs Réalité")
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.show()
 #my example 
 
 data = pd.read_csv("boston.csv")
@@ -146,24 +199,31 @@ X = data.drop(columns=['MEDV']).values.T       #on enlève le prix à prédire =
 Y = data['MEDV'].values.reshape(1, -1)        
 
 # Normalisation des features
-X = X / X.max(axis=1, keepdims=True)
-
-# 2️ Séparer train / validation / test
-from sklearn.model_selection import train_test_split
-
-# Séparer train+val / test
 X_temp, X_test, Y_temp, Y_test = train_test_split(X.T, Y.T, test_size=0.2, random_state=42)
+X_train, X_val, Y_train, Y_val = train_test_split(X_temp, Y_temp, test_size=0.25, random_state=42)
 
-# Séparer train / validation
-X_train, X_val, Y_train, Y_val = train_test_split(X_temp, Y_temp, test_size=0.25, random_state=42)  # 0.25*0.8=0.2
-
-# Transposer pour correspondre au format attendu par NN
 X_train = X_train.T
 X_val = X_val.T
 X_test = X_test.T
 Y_train = Y_train.T
 Y_val = Y_val.T
 Y_test = Y_test.T
+
+X_mean = X_train.mean(axis=1, keepdims=True)
+X_std = X_train.std(axis=1, keepdims=True)
+X_std[X_std == 0] = 1
+X_train = (X_train - X_mean) / X_std
+X_val = (X_val - X_mean) / X_std
+X_test = (X_test - X_mean) / X_std
+Y_mean = Y_train.mean()
+Y_std = Y_train.std()
+Y_train = (Y_train - Y_mean) / Y_std
+Y_val = (Y_val - Y_mean) / Y_std
+Y_test = (Y_test - Y_mean) / Y_std
+
+
+
+
 
 
 identity = ActivationFunction(
@@ -182,10 +242,10 @@ loss_fn = ErrorFunction.MSE()
 
 # Entraînement
 train_err, val_err, test_err = nn.train(
-    X_train, Y_train, epochs=100, batch_size=16, learning_rate=0.01,
-    loss_fn=loss_fn,
-    X_train=X_train, X_val=X_val, X_test=X_test,
-    Y_train=Y_train, Y_val=Y_val, Y_test=Y_test
+    X_train, Y_train, X_val, Y_val, X_test, Y_test,
+    epochs=100, batch_size=32, learning_rate=0.01,
+    loss_fn=loss_fn
 )
 
-plot_errors(train_err, val_err, test_err)
+plot_errors(train_err, val_err)
+plot_predictions(nn, X_train, Y_train, X_val, Y_val, X_test, Y_test, Y_mean, Y_std)
