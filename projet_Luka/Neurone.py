@@ -27,6 +27,9 @@ class Layer:
         self.v_w = np.zeros_like(self.w)
         self.m_b = np.zeros_like(self.biais)
         self.v_b = np.zeros_like(self.biais)
+        #pour RMSProp
+        self.s_w = np.zeros_like(self.w)
+        self.s_b = np.zeros_like(self.biais)
 
 
     def forward(self, x):
@@ -47,6 +50,15 @@ class Layer:
     def update(self,lr,g_w,g_b):
         self.w -= lr*g_w
         self.biais -= lr*g_b
+
+    def RMS_update(self,grad_w, grad_b, lr, beta=0.9, epsilon=1e-8):
+        # Met à jour les moyennes mobiles des carrés des gradients
+        self.s_w = beta * self.s_w + (1 - beta) * (grad_w ** 2)
+        self.s_b = beta * self.s_b + (1 - beta) * (grad_b ** 2)
+
+        # Mise à jour des poids et biais
+        self.w -= lr * grad_w / (np.sqrt(self.s_w) + epsilon)
+        self.biais -= lr * grad_b / (np.sqrt(self.s_b) + epsilon)
 
     def Adam_update(self,grad_w, grad_b, lr, t, beta1=0.9, beta2=0.999, epsilon=1e-8):
         # Met à jour les moments
@@ -149,8 +161,33 @@ class Neural_Network:
         return y_pred
     
 
-    def RMS(self,y,lr):
-        pass
+    def RMS(self, y, lr):
+        y = np.array(y, dtype=float)
+        if y.ndim == 1:
+            y = y.reshape(1, -1)
+        
+        y_pred = self.a[-1]
+        L = self.nbl - 1
+        delta = [None] * (L + 1)
+
+        # dernière couche
+        neu = self.l[-1]
+        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+
+        # propagation arrière
+        for i in range(L - 1, -1, -1):
+            neu = self.l[i]
+            next_neu = self.l[i + 1]
+            delta[i] = (next_neu.w.T @ delta[i + 1]) * neu.activ.derivative(neu.z)
+
+        # update RMSProp
+        for (i, neu) in enumerate(self.l):
+            grad_w = delta[i] @ self.a[i].T
+            grad_b = np.sum(delta[i], axis=1)
+            neu.RMS_update(grad_w, grad_b, lr)
+
+        return y_pred
+
     
 
     def ADAM(self,y,lr):
