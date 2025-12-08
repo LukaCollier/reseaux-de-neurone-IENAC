@@ -73,4 +73,3 @@ plt.tight_layout()
 plt.show()
 # Afficher la loss finale
 print(f"\nLoss finale: {train_losses[-1]:.6f}")
-print(f"Erreur moyenne absolue: {np.mean(np.abs(res_test - res_nn_test)):.6f}")

@@ -46,7 +46,7 @@ plt.plot(network.train_losses, label='Train Loss', color='blue', linewidth=2)
 plt.plot(network.val_losses, label='Validation Loss', color='red', linewidth=2)
 plt.xlabel('Epoch')
 plt.ylabel('Loss (MSE)')
-plt.title('Courbes de perte (ADAM)')
+plt.title('Courbes de perte (RMSProp)')
 plt.legend()
 plt.grid(True, alpha=0.3)
 plt.yscale('log')
@@ -75,4 +75,3 @@ plt.show()
 
 # Afficher la loss finale
 print(f"\nLoss finale: {train_losses[-1]:.6f}")
-print(f"Erreur moyenne absolue: {np.mean(np.abs(res_test - res_nn_test)):.6f}")
