@@ -46,3 +46,13 @@ class ActivationF:
             return 1 - np.tanh(x) ** 2
         
         return cls(function=tanh_func, derivative=tanh_deriv)
+    
+    @classmethod
+    def identity(cls):
+        def identity_func(x):
+            return x
+        
+        def identity_deriv(x):
+            return np.ones_like(x)
+        
+        return cls(function=identity_func, derivative=identity_deriv)
