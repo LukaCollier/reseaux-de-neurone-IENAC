@@ -47,7 +47,7 @@ class Layer:
 
 
 
-    def update(self,lr,g_w,g_b):
+    def SGD_update(self,lr,g_w,g_b):
         self.w -= lr*g_w
         self.biais -= lr*g_b
 
@@ -164,7 +164,7 @@ class Neural_Network:
             # Produit matriciel: (n_neurons, batch_size) @ (batch_size, n_inputs) = (n_neurons, n_inputs)
             grad_w = delta[i] @ self.a[i].T
             grad_b = np.sum(delta[i], axis=1) #permet d'éviter les problèmes et de perdre 1H X)
-            neu.update(lr,grad_w,grad_b)
+            neu.SGD_update(lr,grad_w,grad_b)
         return y_pred
     
 

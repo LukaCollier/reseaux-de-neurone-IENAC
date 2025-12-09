@@ -30,6 +30,9 @@ class Layer:
         #pour RMSProp
         self.s_w = np.zeros_like(self.w)
         self.s_b = np.zeros_like(self.biais)
+        #pour Momentum
+        self.vw_momentum = np.zeros_like(self.w)
+        self.vb_momentum = np.zeros_like(self.biais)
 
 
     def forward(self, x):
@@ -47,9 +50,20 @@ class Layer:
 
 
 
-    def update(self,lr,g_w,g_b):
+    def SGD_update(self,lr,g_w,g_b):
         self.w -= lr*g_w
         self.biais -= lr*g_b
+
+
+    def SGDMomentum_update(self,grad_w, grad_b, lr, momentum=0.9):
+        # Met à jour les vitesses
+        self.vw_momentum = momentum * self.vw_momentum + lr * grad_w
+        self.vb_momentum = momentum * self.vb_momentum + lr * grad_b
+
+        # Mise à jour des poids et biais
+        self.w -= self.vw_momentum
+        self.biais -= self.vb_momentum
+
 
     def RMS_update(self,grad_w, grad_b, lr, beta=0.9, epsilon=1e-8):
         # Met à jour les moyennes mobiles des carrés des gradients
@@ -108,6 +122,7 @@ class Neural_Network:
 
         #pour ADAM
         self.t = 0
+        #pour Momentum
 
 
     def forward(self,x):
@@ -164,9 +179,39 @@ class Neural_Network:
             # Produit matriciel: (n_neurons, batch_size) @ (batch_size, n_inputs) = (n_neurons, n_inputs)
             grad_w = delta[i] @ self.a[i].T
             grad_b = np.sum(delta[i], axis=1) #permet d'éviter les problèmes et de perdre 1H X)
-            neu.update(lr,grad_w,grad_b)
+            neu.SGD_update(lr,grad_w,grad_b)
         return y_pred
     
+    def SGDMomentum(self, y, lr):
+        y = np.array(y, dtype=float)
+        # Convertir y en format (n_output, batch_size)
+        if y.ndim == 1:
+            y = y.reshape(-1, 1)  # (n_output, 1)
+        else:
+            y = y.T  # (batch_size, n_output) -> (n_output, batch_size)
+        
+        y_pred = self.a[-1]
+        L = self.nbl - 1
+        delta = [None] * (L + 1)
+
+        # couche la plus haute
+        neu = self.l[-1]
+        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+
+        # pour les autres couches
+        for i in range(L - 1, -1, -1):
+            neu = self.l[i]
+            next_neu = self.l[i + 1]
+            delta[i] = (next_neu.w.T @ delta[i + 1]) * neu.activ.derivative(neu.z)
+
+        # update Momentum
+        for (i, neu) in enumerate(self.l):
+            grad_w = delta[i] @ self.a[i].T
+            grad_b = np.sum(delta[i], axis=1)
+            neu.SGDMomentum_update(grad_w, grad_b, lr)
+
+        return y_pred
+
 
     def RMS(self, y, lr):
         y = np.array(y, dtype=float)
@@ -284,6 +329,39 @@ class Neural_Network:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
 
+
+    def train_SGDMomentum(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
+        Nb_v_entr = x_train.shape[0]
+        for k in range(epochs):
+            if k % 100 == 0:
+                print(f"Epoch {k}/{epochs}")
+            
+            # Mélanger les données à chaque epoch
+            indices = np.random.permutation(Nb_v_entr)
+            epoch_loss = 0
+            num_batches = 0
+            # Parcourir par mini-batches
+            for i in range(0, Nb_v_entr, batch_size):
+                # Extraire le batch
+                #calcul de l'indice de fin du batch
+                end_idx = min(i + batch_size, Nb_v_entr)
+                batch_indices = indices[i:end_idx]
+                x_batch = x_train[batch_indices]
+                y_batch = y_train[batch_indices]
+                # Forward et backward sur le batch
+                self.forward(x_batch)
+                self.SGDMomentum(y_batch, lr)
+                # Calculer la perte pour ce batch
+                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                num_batches += 1
+            
+            # Perte moyenne d'entraînement pour cette epoch
+            self.train_loss(epoch_loss, num_batches)
+            if x_val is not None and y_val is not None:
+                val_loss = self.evaluate(x_val, y_val)
+                self.val_losses.append(val_loss)
+                if k % 100 == 0:
+                    print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
 
     def train_RMS(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
