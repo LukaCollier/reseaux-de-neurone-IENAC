@@ -39,16 +39,16 @@ nn = Neurone.Neural_Network(
 nn.train_ADAM(
     x_train=X_train,
     y_train=y_train,
-    epochs=100,
+    epochs=50,
     lr=0.001,
-    batch_size=64,
+    batch_size=256,
     x_val=X_val,
     y_val=y_val
 )
 
 y_pred = nn.forward(X_val)
-y_pred_labels = np.argmax(y_pred, axis=1)
-y_true_labels = np.argmax(y_val, axis=1)
+y_pred_labels = np.argmax(y_pred, axis=0)  # y_pred est (10, n_samples)
+y_true_labels = np.argmax(y_val, axis=1)   # y_val est (n_samples, 10)
 
 accuracy = np.mean(y_pred_labels == y_true_labels)
 
