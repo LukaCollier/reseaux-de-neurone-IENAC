@@ -48,7 +48,9 @@ class Layer:
         self.f = self.activ.function(self.z)
         return self.f
 
-
+    def cleanWB(self):
+        self.biais=np.random.randn(self.n_neurone)
+        self.w = np.random.randn(self.n_neurone, self.n_input)
 
     def SGD_update(self,lr,g_w,g_b):
         self.w -= lr*g_w
@@ -138,6 +140,10 @@ class Neural_Network:
             x=neu.forward(x)
             self.a.append(x)
         return x
+
+    def cleanNetwork(self):
+        for lay in self.l:
+            lay.cleanWB()
 
 
 
