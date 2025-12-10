@@ -120,3 +120,4 @@ for name, train_func in optimizers.items():
     print(f"MAE Validation: {mae_val:.2f}k$")
     print(f"MAE Test: {mae_test:.2f}k$")
     print(f"{'='*50}")
+    network.cleanNetwork()  # Réinitialiser le réseau pour le prochain optimiseur

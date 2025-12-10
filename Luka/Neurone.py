@@ -144,6 +144,8 @@ class Neural_Network:
     def cleanNetwork(self):
         for lay in self.l:
             lay.cleanWB()
+        self.train_losses = []
+        self.val_losses=[]
 
 
 
