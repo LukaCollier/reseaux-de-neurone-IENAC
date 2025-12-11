@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import Neurone
-import Activation
+import src.Neurone as Neurone
+import src.Activation as Activation
 from sklearn.model_selection import train_test_split
 
 script_dir = os.path.dirname(os.path.abspath(__file__))

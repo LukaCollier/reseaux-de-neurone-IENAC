@@ -1,6 +1,6 @@
 import numpy as np
-import Activation
-import serialisation
+from . import Activation
+from . import serialisation
 
 class Layer:
     '''

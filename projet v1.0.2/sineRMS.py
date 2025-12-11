@@ -1,5 +1,5 @@
-import Neurone
-import Activation
+import src.Neurone as Neurone
+import src.Activation as Activation
 import numpy as np
 import matplotlib.pyplot as plt
 

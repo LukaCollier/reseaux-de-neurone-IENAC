@@ -2,9 +2,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import Activation
-import Neurone
+import src.Neurone as Neurone
+import src.Activation as Activation
+import os
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
 # Charger CSV
 data = pd.read_csv("mnist.csv")
 X = data.iloc[:, 1:].values / 255.0
