@@ -45,7 +45,7 @@ line_val, = ax.plot([], [], label="val loss")
 ax.legend()
 '''
 # ---------- Entraînement manuel avec mise à jour Matplotlib ----------
-epochs = 50
+epochs = 100
 batch_size = 256
 lr = 0.001
 

@@ -1,0 +1,121 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=2cm}
+
+\title{Résumé du Pont Python--BizHawk et Intégration avec un Réseau de Neurones}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Objectif général}
+L'objectif est de créer une intelligence artificielle capable de jouer automatiquement à \textbf{Super Mario World} sur un émulateur SNES. Le réseau de neurones est écrit en Python et s'entraîne avec l'optimiseur \textbf{Adam}. Cependant, l'émulateur BizHawk utilise le \textbf{Lua} pour contrôler les entrées. Il faut donc établir un pont entre Python et BizHawk.
+
+\section{Principe du Pont Python--BizHawk}
+L'idée générale est de :
+
+\begin{enumerate}
+    \item Lancer un script \textbf{Lua dans BizHawk} qui :
+    \begin{itemize}
+        \item écoute des commandes venant de Python via un socket (TCP par exemple),
+        \item lit ces commandes (boutons à presser),
+        \item applique les commandes via \texttt{joypad.set},
+        \item avance l'émulation image par image via \texttt{emu.frameadvance()}.
+    \end{itemize}
+    \item Depuis Python :
+    \begin{itemize}
+        \item générer des actions via le réseau de neurones,
+        \item envoyer les actions à BizHawk sous forme de données (JSON ou tableau),
+        \item éventuellement recevoir des informations (RAM, image, reward). 
+    \end{itemize}
+\end{enumerate}
+
+\section{Principe du contrôle BizHawk sans inclure de code Lua}
+Le fichier ne doit pas contenir de script Lua. Cette section décrit donc seulement le principe général, sans aucun extrait de code.
+
+BizHawk utilise des scripts Lua pour recevoir et appliquer des commandes de contrôle. Le rôle de Lua est uniquement :
+
+\begin{itemize}
+    \item de recevoir des instructions envoyées par Python (état des boutons),
+    \item de les convertir en actions dans l'émulateur via \texttt{joypad.set},
+    \item puis de faire avancer l'émulation image par image.
+\end{itemize}
+
+Dans ce document, aucun code Lua n'est fourni conformément à votre demande.
+
+\section{Structure minimale du client Python}
+
+\begin{verbatim}
+import socket, json
+
+def send_input(buttons):
+    s = json.dumps(buttons) + "\n"
+    sock.sendall(s.encode())
+
+sock = socket.create_connection(("127.0.0.1", 5555))
+
+# Exemple : Mario avance
+send_input({"Right":1, "A":0})
+\end{verbatim}
+
+\section{Ce qui est déjà fait en Python}
+
+\begin{itemize}
+    \item des couches de neurones (classe \texttt{Layer}),
+    \item propagation avant (\texttt{forward}),
+    \item rétropropagation manuelle,
+    \item optimisation avec Adam entièrement codé à la main,
+    \item architecture \texttt{Neural\_Network} supportant différentes activations,
+    \item entraînement mini-batch (SGD et Adam).
+\end{itemize}
+
+Votre réseau est donc fonctionnel et peut produire des actions à chaque frame.
+
+\section{À faire}
+Pour connecter le réseau de neurones à BizHawk, il reste :
+
+\subsection*{1. Définir l'observation envoyée au réseau}
+\begin{itemize}
+    \item Capturer l'écran depuis BizHawk (via Lua ou un bridge existant), ou
+    \item lire des valeurs RAM pertinentes (position de Mario, vitesse, etc.).
+\end{itemize}
+
+\subsection*{2. Convertir cette observation en entrée compatible avec votre NN}
+\begin{itemize}
+    \item normalisation des pixels,
+    \item ou simple vecteur d'état si RAM.
+\end{itemize}
+
+\subsection*{3. Transformer la sortie du NN en actions bouton}
+\begin{itemize}
+    \item typiquement : sortie \texttt{softmax} ou seuils pour \texttt{A}, \texttt{B}, \texttt{Left}, etc.,
+    \item puis construire un dictionnaire JSON pour Lua.
+\end{itemize}
+
+\subsection*{4. Implémenter la boucle Principal RL}
+\begin{itemize}
+    \item envoyer observation dans \texttt{forward()},
+    \item envoyer l'action au script Lua,
+    \item récupérer reward + nouvel état,
+    \item faire une mise à jour ( Adam).
+\end{itemize}
+
+\subsection*{5. Définir une fonction de reward}
+\begin{itemize}
+    \item progression horizontale de Mario,
+    \item éviter les morts,
+    \item éventuellement : vitesse, pièces, niveau atteint.
+\end{itemize}
+
+\section{Conclusion}
+Il ne manque que le \textbf{pont avec BizHawk} et la \textbf{boucle d'entraînement RL} qui utilise ce pont.
+
+
+\end{itemize}
+
+\end{document}
