@@ -1,0 +1,86 @@
+"""Modèle 1 code de classification"""
+
+
+import numpy as np
+import pandas as pd
+import random
+%config InlineBackend.figure_format = 'svg'
+%matplotlib inline
+import matplotlib.pyplot as plt
+from notebook_utils import prepare_notebook_graphics
+import keras
+from keras.utils import to_categorical
+from myst_nb import glue
+prepare_notebook_graphics()
+from keras.layers import Dense, InputLayer
+from keras.models import Sequential
+from keras.utils import set_random_seed
+from keras.callbacks import EarlyStopping
+
+
+iris = pd.read_csv("../data/iris.csv", index_col=0)
+iris = iris.sample(frac=1)
+y = to_categorical(iris["target"])
+X = iris.drop(columns=["target"])
+X -= X.mean(axis=0)
+X /= X.std(axis=0)
+
+set_random_seed(0)
+model = Sequential([
+    InputLayer(input_shape=(4, )),
+    Dense(units=256, activation="relu"),
+    Dense(units=256, activation="relu"),
+    Dense(units=256, activation="relu"),
+    Dense(units=3, activation="softmax")
+])
+
+cb_es = EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True)
+
+n_epochs = 100
+model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+h = model.fit(X, y, 
+              validation_split=0.3, epochs=n_epochs, batch_size=30, 
+              verbose=0, callbacks=[cb_es])
+
+plt.plot(np.arange(1, len(h.history["loss"]) + 1), h.history["loss"], label="Apprentissage")
+plt.plot(np.arange(1, len(h.history["val_loss"]) + 1), h.history["val_loss"], label="Validation")
+plt.axhline(y=np.min(h.history["val_loss"]), color="k", linestyle="dashed")
+plt.xlim([0, 102])
+plt.ylabel("Loss")
+plt.xlabel("Epochs")
+plt.legend()
+
+glue("epoch_best_model_es", np.argmin(h.history["val_loss"]) + 1, display=False)
+
+
+"""Modèle 2 pb de classification"""
+
+def softmax(z):
+    z=np.array(z)
+    expz= np.exp(z-np.max(z))
+    return expz/expz.sum()
+
+def cross_entropy(self, y_pred, y_true):
+    eps = 1e-9
+    return -np.sum(y_true * np.log(y_pred + eps))
+
+def train(self, X, Y, epochs, lr):
+    for epoch in range(epochs):
+        loss = 0
+
+        for x, y in zip(X, Y):
+            y_pred = self.forward(x)
+
+            loss += self.cross_entropy(y_pred, y)
+
+             # Gradient clé Softmax + Cross-Entropy
+            grad = y_pred - y
+
+            self.backward(grad, lr)
+
+    print(f"Epoch {epoch+1}, Loss = {loss/len(X):.4f}")
+
+
+def predict(self, x):
+    y_pred = self.forward(x)
+    return np.argmax(y_pred)

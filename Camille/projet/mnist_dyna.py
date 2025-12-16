@@ -30,20 +30,22 @@ nn = Neurone.Neural_Network(
 )
 
 # ---------- Matplotlib dynamique ----------
+'''
 plt.ion()
 fig, ax = plt.subplots()
 ax.set_title("Évolution dynamique de la loss")
 ax.set_xlabel("Epoch")
 ax.set_ylabel("Loss")
-
+'''
 train_losses = []
 val_losses = []
+'''
 line_train, = ax.plot([], [], label="train loss")
 line_val, = ax.plot([], [], label="val loss")
 ax.legend()
-
+'''
 # ---------- Entraînement manuel avec mise à jour Matplotlib ----------
-epochs = 50
+epochs = 100
 batch_size = 256
 lr = 0.001
 
@@ -60,7 +62,7 @@ for epoch in range(epochs):
 
     train_losses.append(nn.train_losses[-1])
     val_losses.append(nn.val_losses[-1])
-
+'''
     # Mise à jour du graphe
     line_train.set_data(range(len(train_losses)), train_losses)
     line_val.set_data(range(len(val_losses)), val_losses)
@@ -70,19 +72,29 @@ for epoch in range(epochs):
 
 plt.ioff()
 plt.show()
-
+'''
 # Choisir un index au hasard
-idx = np.random.randint(0, X_val.shape[0])
+plt.ion()  # mode interactif
 
-image = X_val[idx].reshape(28, 28)
-true_label = np.argmax(y_val[idx])
+fig, ax = plt.subplots(figsize=(3, 3))
 
-# prédiction
-pred = nn.forward(X_val[idx].reshape(1, -1))
-pred_label = np.argmax(pred)
+for idx in range(X_val.shape[0]):
+    image = X_val[idx].reshape(28, 28)
+    true_label = np.argmax(y_val[idx])
 
-plt.figure(figsize=(3, 3))
-plt.imshow(image, cmap="gray")
-plt.title(f"Vraie étiquette : {true_label}\nPrédiction RN : {pred_label}")
-plt.axis("off")
+    # Prédiction du réseau
+    pred = nn.forward(X_val[idx].reshape(1, -1))
+    pred_label = np.argmax(pred)
+
+    # Affichage
+    ax.clear()
+    ax.imshow(image, cmap="gray")
+    ax.set_title(f"Image {idx}/{X_val.shape[0]-1}\n"
+                 f"Étiquette vraie : {true_label}\n"
+                 f"Prédiction RN : {pred_label}")
+    ax.axis("off")
+
+    plt.pause(2)   # temps entre chaque image
+
+plt.ioff()
 plt.show()

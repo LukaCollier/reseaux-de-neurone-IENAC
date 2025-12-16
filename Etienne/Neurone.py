@@ -139,8 +139,8 @@ class Neural_Network:
     def to_json(self): #ajout d'Étienne
         return {"activ":self.activ[0].name,"nb_n_l":self.nb_n_l,"n_input_init":self.n_input_init,"l":[elt.to_json() for elt in self.l],"a":[serialisation.encode_numpy(elt) for elt in self.a],"nbl":self.nbl,"train_losses":self.train_losses,"val_losses":self.val_losses,"t":self.t}
 
-    def serialise(self,name): #ajout d'Étienne
-        serialisation.serialise(name,self.to_json())
+    def serialise(self,name,mode='x'): #ajout d'Étienne
+        serialisation.serialise(name,self.to_json(),mode)
         
     @classmethod
     def deserialise(cls,name): #ajout d'Étienne
