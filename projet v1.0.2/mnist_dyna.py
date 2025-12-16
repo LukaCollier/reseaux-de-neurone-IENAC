@@ -49,7 +49,7 @@ ax.legend()
 '''
 # ---------- Entraînement manuel avec mise à jour Matplotlib ----------
 epochs = 100
-batch_size = 256
+batch_size = 32
 lr = 0.001
 
 for epoch in range(epochs):
@@ -80,7 +80,8 @@ plt.show()
 plt.ion()  # mode interactif
 
 fig, ax = plt.subplots(figsize=(3, 3))
-
+res=0
+nbf=1999
 for idx in range(X_val.shape[0]):
     image = X_val[idx].reshape(28, 28)
     true_label = np.argmax(y_val[idx])
@@ -88,7 +89,9 @@ for idx in range(X_val.shape[0]):
     # Prédiction du réseau
     pred = nn.forward(X_val[idx].reshape(1, -1))
     pred_label = np.argmax(pred)
-
+    if pred_label==true_label:
+        res+=1
+    '''
     # Affichage
     ax.clear()
     ax.imshow(image, cmap="gray")
@@ -97,7 +100,9 @@ for idx in range(X_val.shape[0]):
                  f"Prédiction RN : {pred_label}")
     ax.axis("off")
 
-    plt.pause(2)   # temps entre chaque image
+    plt.pause(0.01)   # temps entre chaque image
 
 plt.ioff()
 plt.show()
+'''
+print(f"Précision sur le jeu de validation : {res/nbf*100:.2f}%")

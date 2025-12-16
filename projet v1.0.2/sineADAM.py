@@ -17,6 +17,7 @@ network = Neurone.Neural_Network(1, [8, 8, 1], activ_tanh)
 '''
 Entrainement avec ADAM
 '''
+
 Nb_v_entr = 2000
 Epoch = 500
 lr = 1e-3  # Learning rate généralement plus petit pour ADAM (1e-3 au lieu de 1e-2)
@@ -32,8 +33,9 @@ v_val = np.random.uniform(0, 2*np.pi, Nb_v_val).reshape(-1, 1)  # Shape: (500, 1
 res_val = np.sin(v_val.flatten()).reshape(-1, 1)  # Shape: (500, 1)
 # CHANGEMENT PRINCIPAL: train_ADAM au lieu de train_SGD
 network.train_ADAM(v_entr, res_th, Epoch, lr, batch_size, v_val, res_val)
-
 train_losses = network.train_losses
+
+network.serialise("sine_ADAM_model")
 
 # Tracer la courbe de perte
 plt.figure(figsize=(15, 5))
