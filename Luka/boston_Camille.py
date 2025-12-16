@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
-import Neurone
-import Activation
+import src.Neurone as Neurone
+import src.Activation as Activation
 from sklearn.model_selection import train_test_split
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +34,7 @@ Y_test_norm = (Y_test - mean_Y) / std_Y
 # Paramètres
 Epoch = 1000
 lr = 0.001
+lrSGD = 0.0001
 batch_size = 32
 
 # NE PAS transposer X et Y - les garder en format (n_samples, n_features)
@@ -55,7 +56,10 @@ optimizers = {
 #on boucle sur les 3 optimisers
 
 for name, train_func in optimizers.items():
-    train_func(X_train_norm, Y_train_norm, Epoch, lr, batch_size, X_val_norm, Y_val_norm)
+    if name == "SGD":
+        train_func(X_train_norm, Y_train_norm, Epoch, lrSGD, batch_size, X_val_norm, Y_val_norm)
+    else:
+        train_func(X_train_norm, Y_train_norm, Epoch, lr, batch_size, X_val_norm, Y_val_norm)
 
     # Prédictions sur l'ensemble de validation
     Y_val_pred_norm = network.forward(X_val_norm)
