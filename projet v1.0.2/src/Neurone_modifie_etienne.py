@@ -1,7 +1,7 @@
 import numpy as np
-import Activation
-import serialisation
-import serialisation_pkl
+from . import Activation
+from . import serialisation
+from . import serialisation_pkl
 
 class Layer:
     '''
