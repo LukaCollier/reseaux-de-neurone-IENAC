@@ -1,5 +1,7 @@
 import numpy as np
-import Activation
+from . import Activation
+from . import serialisation
+from . import serialisation_pkl
 
 class Layer:
     '''
@@ -35,6 +37,35 @@ class Layer:
         self.vb_momentum = np.zeros_like(self.biais)
 
 
+    
+    def to_json(self): # AJOUT D'Étienne 
+        return {"n_input":self.n_input,"n_neurone":self.n_neurone,"biais":serialisation.encode_numpy(self.biais),"w":serialisation.encode_numpy(self.w),"x":serialisation.encode_numpy(self.x),"z":serialisation.encode_numpy(self.z),"f":serialisation.encode_numpy(self.f),"activ":self.activ.name,"m_w":serialisation.encode_numpy(self.m_w),"v_w":serialisation.encode_numpy(self.v_w),"m_b":serialisation.encode_numpy(self.m_b),"v_b":serialisation.encode_numpy(self.v_b),"s_w":serialisation.encode_numpy(self.s_w),"s_b":serialisation.encode_numpy(self.s_b)}
+    
+
+    def serialise(self,name): #ajout d'Étienne
+        serialisation.serialise(name,self.to_json())
+    
+
+    @classmethod
+    def dict_to_layer(cls,d): #ajout d'Étienne
+        res=cls(d["n_input"],
+                   d["n_neurone"],
+                   Activation.ActivationF.creation_with_name(d["activ"])) #TODO fonction d'activation à traiter plus en détail
+        res.biais=serialisation.decode_numpy(d["biais"])
+        res.w=serialisation.decode_numpy(d["w"])
+        res.x=serialisation.decode_numpy(d["x"])
+        res.z=serialisation.decode_numpy(d["z"])
+        res.f=serialisation.decode_numpy(d["f"])
+        res.m_w=serialisation.decode_numpy(d["m_w"])
+        res.v_w=serialisation.decode_numpy(d["v_w"])
+        res.m_b=serialisation.decode_numpy(d["m_b"])
+        res.v_b=serialisation.decode_numpy(d["v_b"])
+        res.s_w=serialisation.decode_numpy(d["s_w"])
+        res.s_b=serialisation.decode_numpy(d["s_b"])
+        res.vw_momentum =serialisation.decode_numpy(d["vw_momentum"])
+        res.vb_momentum =serialisation.decode_numpy(d["vb_momentum"])
+        return res
+    
     def forward(self, x):
         # x doit être de shape: (n_input, batch_size) ou (n_input, 1)
         self.x = np.array(x)
@@ -104,7 +135,7 @@ class Neural_Network:
     ''' 
 
 
-    def __init__(self,n_input_init,nb_n_l,activ):
+    def __init__(self,n_input_init,nb_n_l,activ,loss="mse"):
         '''
         Mémo isinstance vérifie que activ est bien du même type que l'objet
         '''
@@ -114,6 +145,10 @@ class Neural_Network:
             assert len(activ) == len(nb_n_l)         #Vérifie qu'il y a suffisament d'activation que de layers
         self.l=[]
         self.a=[]
+        self.loss=loss #mse ou cross_entropy. mse par défaut
+        self.n_input_init=n_input_init #ajout d'Étienne car plus facile pour désérialiser
+        self.nb_n_l=nb_n_l #ajout d'Étienne pour même raison que ligne au dessus 
+        self.activ=activ #ajout d'Étienne pour même raison que ligne au dessus 
         self.nbl=len(nb_n_l)
         n_input=n_input_init
         self.train_losses = []
@@ -126,6 +161,31 @@ class Neural_Network:
         self.t = 0
         #pour Momentum
 
+    def to_json(self): #ajout d'Étienne
+        return {"activ":self.activ[0].name,"nb_n_l":self.nb_n_l,"n_input_init":self.n_input_init,"l":[elt.to_json() for elt in self.l],"a":[serialisation.encode_numpy(elt) for elt in self.a],"nbl":self.nbl,"train_losses":self.train_losses,"val_losses":self.val_losses,"t":self.t,"loss":self.loss}
+
+    def serialise(self,name,mode='x'): #ajout d'Étienne
+        serialisation.serialise(name,self.to_json(),mode)
+
+    @classmethod
+    def deserialise(cls,name): #ajout d'Étienne
+        data=serialisation.deserialise(name)
+        res=cls(data["n_input_init"],data["nb_n_l"],Activation.ActivationF.creation_with_name(data["activ"])) #activ à gérer
+        res.l=[Layer.dict_to_layer(d) for d in data["l"]]
+        res.a=[serialisation.decode_numpy(elt) for elt in data["a"]]
+        res.train_losses=data["train_losses"]
+        res.nbl=data["nbl"]
+        res.val_losses=data["val_losses"]
+        res.t=data["t"]
+        return res
+    
+    
+    def serialise_pkl(self,name,mode='xb'): #ajout Étienne 16/12/2025
+        serialisation_pkl.serialise_pkl(self,name,mode)
+        
+    @classmethod       
+    def deserialise_pkl(cls,name): #ajout Étienne 16/12/2025
+        return serialisation_pkl.deserialise_pkl(name)
 
     def forward(self,x):
         x = np.array(x)
@@ -151,6 +211,22 @@ class Neural_Network:
 
     def MSE(self,y_pred,y):
         return 0.5*np.sum((y_pred-y)**2)
+    
+    def cross_entropy(self,y_pred,y_test):
+    # Cross entropy pour classification multi-classe / binaire
+        eps = 1e-12
+        y_pred_clipped = np.clip(y_pred, eps, 1 - eps)
+        return -np.sum(y_test * np.log(y_pred_clipped))
+
+    def compute_last_delta(self, y_pred, y, last_layer):
+        if self.loss == "mse":
+            return (y_pred - y) * last_layer.activ.derivative(last_layer.z)
+        elif self.loss == "cross_entropy":
+            return (y_pred - y)
+        else:
+            raise ValueError("Unknown loss type: " + self.loss)
+
+
 
 
 
@@ -173,8 +249,7 @@ class Neural_Network:
         
         #couche la plus haute
         neu=self.l[-1]
-        delt=(y_pred-y)*neu.activ.derivative(neu.z)
-        delta[-1]=delt
+        delta[-1] = self.compute_last_delta(y_pred, y, neu)
         
         for i in range(L-1,-1,-1):
             neu=self.l[i]
@@ -204,7 +279,7 @@ class Neural_Network:
 
         # couche la plus haute
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        delta[-1] = self.compute_last_delta(y_pred, y, neu)
 
         # pour les autres couches
         for i in range(L - 1, -1, -1):
@@ -235,7 +310,7 @@ class Neural_Network:
 
         # dernière couche
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        delta[-1] = self.compute_last_delta(y_pred, y, neu)
 
         # propagation arrière
         for i in range(L - 1, -1, -1):
@@ -267,7 +342,7 @@ class Neural_Network:
 
         # couche la plus haute
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        delta[-1] = self.compute_last_delta(y_pred, y, neu)
         
         # pour les autres couches
         for i in range(L - 1, -1, -1):
@@ -285,6 +360,15 @@ class Neural_Network:
         return y_pred
 
 
+    def update_epoch_loss(self,epoch_loss, y_batch):
+        if self.loss == "mse":
+            return epoch_loss + self.MSE(self.a[-1], y_batch.T)
+        elif self.loss == "cross_entropy":
+            return epoch_loss + self.cross_entropy(self.a[-1], y_batch.T)
+
+
+
+
 
     def train_loss(self,epoch_loss, num_batches):
         train_loss = epoch_loss / num_batches
@@ -298,8 +382,16 @@ class Neural_Network:
             y_test = y_test.reshape(-1, 1)
         else:
             y_test = y_test.T  # (n_samples, n_output) -> (n_output, n_samples)
-        loss = self.MSE(y_pred, y_test)
-        return loss
+                # Choix correct de la perte
+        if self.loss == "mse":
+            return self.MSE(y_pred, y_test)
+        elif self.loss == "cross_entropy":
+        # Cross entropy pour classification multi-classe / binaire
+            return self.cross_entropy(y_pred, y_test)
+        else:
+            raise ValueError("Unknown loss type: " + self.loss)
+        
+
 
 
 
@@ -325,7 +417,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.SGD(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss = self.update_epoch_loss(epoch_loss, y_batch)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -360,7 +452,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.SGDMomentum(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss = self.update_epoch_loss(epoch_loss, y_batch)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -394,7 +486,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.RMS(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss = self.update_epoch_loss(epoch_loss, y_batch)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -429,7 +521,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.ADAM(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss = self.update_epoch_loss(epoch_loss, y_batch)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch

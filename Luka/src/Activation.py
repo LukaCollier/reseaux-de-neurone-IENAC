@@ -80,6 +80,7 @@ class ActivationF:
             return exp_x / np.sum(exp_x, axis=0, keepdims=True)
 
         def softmax_deriv(x):
-            return np.ones_like(x)
+            s = softmax_func(x)
+            return s * (1 - s)  # dérivée approximative (diagonale uniquement)
 
         return cls(function=softmax_func, derivative=softmax_deriv, name="softmax")
