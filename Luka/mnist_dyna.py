@@ -52,8 +52,8 @@ nn.train_ADAM(
 )
 
 # AMÉLIORATION 3: Sauvegarder le meilleur modèle
-print("\nSauvegarde du modèle...")
-nn.serialise("mnist_best_model", mode='w')
+#print("\nSauvegarde du modèle...")
+#nn.serialise_pkl("mnist_best_model", mode='w')
 
 # Affichage des courbes de loss
 plt.figure(figsize=(12, 5))

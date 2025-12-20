@@ -18,8 +18,9 @@ class Layer:
     def __init__(self,n_input,n_neurone,activ):
         self.n_input=n_input
         self.n_neurone=n_neurone
-        self.biais=np.random.randn(n_neurone)
-        self.w = np.random.randn(n_neurone, n_input)
+        # Initialisation plus stable pour ReLU (He) et biais à 0
+        self.biais=np.zeros(n_neurone)
+        self.w = np.random.randn(n_neurone, n_input) * np.sqrt(2.0 / n_input)
         self.x=np.zeros(n_input)
         self.z=np.zeros(n_neurone)
         self.f=np.zeros(n_neurone)
@@ -81,8 +82,8 @@ class Layer:
         return self.f
 
     def cleanWB(self):
-        self.biais=np.random.randn(self.n_neurone)
-        self.w = np.random.randn(self.n_neurone, self.n_input)
+        self.biais=np.zeros(self.n_neurone)
+        self.w = np.random.randn(self.n_neurone, self.n_input) * np.sqrt(2.0 / self.n_input)
 
     def SGD_update(self,lr,g_w,g_b):
         self.w -= lr*g_w
@@ -185,6 +186,19 @@ class Neural_Network:
     def MSE(self,y_pred,y):
         return 0.5*np.sum((y_pred-y)**2)
 
+    def cross_entropy(self, y_pred, y):
+        # y_pred: (n_output, batch_size), y: (n_output, batch_size) one-hot
+        eps = 1e-12
+        y_pred = np.clip(y_pred, eps, 1.0)
+        ce = -np.sum(y * np.log(y_pred)) / y.shape[1]
+        return ce
+
+    def get_loss_value(self, y_pred, y):
+        if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy":
+            return self.cross_entropy(y_pred, y)
+        else:
+            return self.MSE(y_pred, y)
+
     def serialise_pkl(self,name,mode='xb'): #ajout Étienne 16/12/2025
         serialisation_pkl.serialise_pkl(self,name,mode)
         
@@ -213,8 +227,10 @@ class Neural_Network:
         
         #couche la plus haute
         neu=self.l[-1]
-        delt=(y_pred-y)*neu.activ.derivative(neu.z)
-        delta[-1]=delt
+        if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy" and neu.activ.name == "softmax":
+            delta[-1] = (y_pred - y)
+        else:
+            delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
         
         for i in range(L-1,-1,-1):
             neu=self.l[i]
@@ -244,7 +260,10 @@ class Neural_Network:
 
         # couche la plus haute
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy" and neu.activ.name == "softmax":
+            delta[-1] = (y_pred - y)
+        else:
+            delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
 
         # pour les autres couches
         for i in range(L - 1, -1, -1):
@@ -275,7 +294,10 @@ class Neural_Network:
 
         # dernière couche
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy" and neu.activ.name == "softmax":
+            delta[-1] = (y_pred - y)
+        else:
+            delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
 
         # propagation arrière
         for i in range(L - 1, -1, -1):
@@ -307,7 +329,10 @@ class Neural_Network:
 
         # couche la plus haute
         neu = self.l[-1]
-        delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
+        if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy" and neu.activ.name == "softmax":
+            delta[-1] = (y_pred - y)
+        else:
+            delta[-1] = (y_pred - y) * neu.activ.derivative(neu.z)
         
         # pour les autres couches
         for i in range(L - 1, -1, -1):
@@ -338,7 +363,7 @@ class Neural_Network:
             y_test = y_test.reshape(-1, 1)
         else:
             y_test = y_test.T  # (n_samples, n_output) -> (n_output, n_samples)
-        loss = self.MSE(y_pred, y_test)
+        loss = self.get_loss_value(y_pred, y_test)
         return loss
 
 
@@ -365,7 +390,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.SGD(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss += self.get_loss_value(self.a[-1], y_batch.T)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -400,7 +425,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.SGDMomentum(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss += self.get_loss_value(self.a[-1], y_batch.T)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -434,7 +459,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.RMS(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss += self.get_loss_value(self.a[-1], y_batch.T)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
@@ -469,7 +494,7 @@ class Neural_Network:
                 self.forward(x_batch)
                 self.ADAM(y_batch, lr)
                 # Calculer la perte pour ce batch
-                epoch_loss += self.MSE(self.a[-1], y_batch.T)
+                epoch_loss += self.get_loss_value(self.a[-1], y_batch.T)
                 num_batches += 1
             
             # Perte moyenne d'entraînement pour cette epoch
