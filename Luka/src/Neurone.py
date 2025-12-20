@@ -206,8 +206,6 @@ class Neural_Network:
     def deserialise_pkl(cls,name): #ajout Étienne 16/12/2025
         return serialisation_pkl.deserialise_pkl(name)
 
-
-
     def SGD(self,y,lr):
         '''
         y : résultat attendu possiblement |y|> 1 si plusieurs neurones sur la couche la plus haute
