@@ -136,7 +136,7 @@ class Neural_Network:
     ''' 
 
 
-    def __init__(self,n_input_init,nb_n_l,activ):
+    def __init__(self,n_input_init,nb_n_l,activ,loss="MSE"):
         '''
         Mémo isinstance vérifie que activ est bien du même type que l'objet
         '''
@@ -150,6 +150,7 @@ class Neural_Network:
         n_input=n_input_init
         self.train_losses = []
         self.val_losses=[]
+        self.loss=loss
         for i,nb_n in enumerate(nb_n_l):
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
@@ -342,10 +343,10 @@ class Neural_Network:
 
 
 
-    def train_SGD(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
+    def train_SGD(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
-            if k % 100 == 0:
+            if verbose and k % 100 == 0:
                 print(f"Epoch {k}/{epochs}")
             
             # Mélanger les données à chaque epoch
@@ -372,15 +373,15 @@ class Neural_Network:
             if x_val is not None and y_val is not None:
                 val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
-                if k % 100 == 0:
+                if verbose and k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
 
 
-    def train_SGDMomentum(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
+    def train_SGDMomentum(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
-            if k % 100 == 0:
+            if verbose and k % 100 == 0:
                 print(f"Epoch {k}/{epochs}")
             
             # Mélanger les données à chaque epoch
@@ -407,14 +408,14 @@ class Neural_Network:
             if x_val is not None and y_val is not None:
                 val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
-                if k % 100 == 0:
+                if verbose and k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
 
-    def train_RMS(self, x_train, y_train, epochs, lr, batch_size,x_val=None,y_val=None):
+    def train_RMS(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
-            if k % 100 == 0:
+            if verbose and k % 100 == 0:
                 print(f"Epoch {k}/{epochs}")
             
             # Mélanger les données à chaque epoch
@@ -441,15 +442,15 @@ class Neural_Network:
             if x_val is not None and y_val is not None:
                 val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
-                if k % 100 == 0:
+                if verbose and k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
 
 
-    def train_ADAM(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None):
+    def train_ADAM(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
-            if k % 100 == 0:
+            if verbose and k % 100 == 0:
                 print(f"Epoch {k}/{epochs}")
             
             # Mélanger les données à chaque epoch
@@ -476,6 +477,6 @@ class Neural_Network:
             if x_val is not None and y_val is not None:
                 val_loss = self.evaluate(x_val, y_val)
                 self.val_losses.append(val_loss)
-                if k % 100 == 0:
+                if verbose and k % 100 == 0:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
-            
+
