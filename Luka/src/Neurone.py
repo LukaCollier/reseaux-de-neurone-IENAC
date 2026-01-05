@@ -184,6 +184,7 @@ class Neural_Network:
             lay.cleanWB()
         self.train_losses = []
         self.val_losses=[]
+        self.t = 0
 
 
 

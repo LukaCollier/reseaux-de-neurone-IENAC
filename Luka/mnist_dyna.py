@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import src.Neurone as Neurone
+import src.Neuronev2 as Neurone
 import src.Activation as Activation
 import os
 
@@ -29,18 +29,18 @@ softmax = Activation.ActivationF.softmax()
 # AMÉLIORATION 1: Architecture plus profonde avec plus de neurones
 nn = Neurone.Neural_Network(
     n_input_init=784,
-    nb_n_l=[512, 256, 128, 10],  # Plus de couches et plus de neurones
-    activ=[relu, relu, relu, softmax],
+    nb_n_l=[128,64, 10],  # Plus de couches et plus de neurones
+    activ=[relu, relu, softmax],
     loss="cross_entropy"
 )
 
 # AMÉLIORATION 2: Plus d'epochs et learning rate adapté
-epochs = 100  # Plus d'epochs
+epochs = 30  # Plus d'epochs
 batch_size = 64  # Batch size plus grand pour stabilité
-lr = 0.001  # Learning rate adapté
+lr = 0.0005  # Learning rate adapté
 
 print("Début de l'entraînement...")
-nn.train_ADAM(
+nn.train_SGDMomentum(
     x_train=X_train,
     y_train=y_train,
     epochs=epochs,

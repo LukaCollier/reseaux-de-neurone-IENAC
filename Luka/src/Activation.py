@@ -1,28 +1,31 @@
 import numpy as np
-#cls permet d'écrire cls que ActivationF
-#ajout d'Étienne : nouvel attribut name étant un str contenant le nom de la fonction utile pour la désérialisation
+
 class ActivationF:
     """
     Classe des fonctions d'activation
     """
-    def __init__(self, function, derivative,name): 
+    def __init__(self, function, derivative, name): 
         self.function = function
         self.derivative = derivative
-        self.name=name #ajout d'Étienne : name = str contenant le nom de la fonction (utile pour la désérialisation)
+        self.name = name
         
     @classmethod
-    def creation_with_name(cls,name): #ajout d'Étienne
-        if name=="sigmoid":
-            return cls.sigmoid()
-        if name=="relu":
-            return cls.relu()
-        if name=="leaky_relu":
-            return cls.leaky_relu()
-        if name=="tanh":
-            return cls.tanh()
+    def creation_with_name(cls, name):
+        """CORRECTION : Gestion complète de tous les cas avec exception"""
+        mapping = {
+            "sigmoid": cls.sigmoid,
+            "relu": cls.relu,
+            "leaky_relu": cls.leaky_relu,
+            "tanh": cls.tanh,
+            "identity": cls.identity,
+            "softmax": cls.softmax
+        }
+        if name in mapping:
+            return mapping[name]()
+        raise ValueError(f"Fonction d'activation inconnue: {name}")
         
     def __call__(self, x):
-        """permet l'appel de l'object comme fonction"""
+        """Permet l'appel de l'object comme fonction"""
         return self.function(x)
     
     @classmethod
@@ -34,14 +37,14 @@ class ActivationF:
             s = sig(x)
             return s * (1 - s)
         
-        return cls(function=sig, derivative=sig_deriv,name="sigmoid") #ajout d'Étienne pour name 
+        return cls(function=sig, derivative=sig_deriv, name="sigmoid")
     
     @classmethod
     def relu(cls):
         return cls(
             function=lambda x: np.maximum(0, x),
             derivative=lambda x: (x > 0).astype(float),
-            name="relu" #ajout d'Étienne
+            name="relu"
         )
     
     @classmethod
@@ -49,7 +52,7 @@ class ActivationF:
         return cls(
             function=lambda x: np.where(x > 0, x, alpha * x),
             derivative=lambda x: np.where(x > 0, 1.0, alpha),
-            name="leaky_relu" #ajout d'Étienne 
+            name="leaky_relu"
         )
     
     @classmethod
@@ -60,7 +63,7 @@ class ActivationF:
         def tanh_deriv(x):
             return 1 - np.tanh(x) ** 2
         
-        return cls(function=tanh_func, derivative=tanh_deriv,name="tanh") #ajout d'Étienne pour name 
+        return cls(function=tanh_func, derivative=tanh_deriv, name="tanh")
 
     @classmethod
     def identity(cls):
@@ -70,7 +73,7 @@ class ActivationF:
         def identity_deriv(x):
             return np.ones_like(x)
         
-        return cls(function=identity_func, derivative=identity_deriv,name="identity") #ajout de Luka Etienne tu l'as oublié
+        return cls(function=identity_func, derivative=identity_deriv, name="identity")
     
     @classmethod
     def softmax(cls):
@@ -80,7 +83,12 @@ class ActivationF:
             return exp_x / np.sum(exp_x, axis=0, keepdims=True)
 
         def softmax_deriv(x):
+            """
+            Note: Cette dérivée est approximative (diagonale uniquement).
+            En pratique, elle n'est jamais utilisée pour la dernière couche
+            avec cross-entropy car on utilise le raccourci delta = y_pred - y.
+            """
             s = softmax_func(x)
-            return s * (1 - s)  # dérivée approximative (diagonale uniquement)
+            return s * (1 - s)
 
         return cls(function=softmax_func, derivative=softmax_deriv, name="softmax")

@@ -53,8 +53,7 @@ colors = {
     "SGD": "orange"
 }
 
-# --- Figures pour les graphiques dynamiques ---
-plt.ion()
+# --- Figures pour les graphiques ---
 fig, axes = plt.subplots(3, 3, figsize=(18, 12))
 fig.tight_layout(pad=3.0)
 for ax_row in axes:
@@ -70,9 +69,9 @@ for ax in axes_comp:
 
 # Dictionnaire pour stocker les résultats
 all_results = {
-    "ADAM": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None},
-    "RMS": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None},
-    "SGD": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None}
+    "ADAM": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None, "accuracy": 0},
+    "RMS": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None, "accuracy": 0},
+    "SGD": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None, "accuracy": 0}
 }
 
 # --- Boucle sur les optimisateurs ---
@@ -132,13 +131,16 @@ for row_idx, (name, train_func) in enumerate(optimizers.items()):
         ax3.set_ylabel("Fréquence")
         ax3.grid(True, alpha=0.3)
         
-        # Stocker les dernières prédictions
-        all_results[name]["true_labels"] = true_labels[:n_samples]
-        all_results[name]["pred_labels"] = pred_labels[:n_samples]
-        all_results[name]["errors"] = errors
-
-        plt.tight_layout(pad=3.0)
-        plt.pause(0.01)
+        # Stocker les dernières prédictions (pour la dernière epoch)
+        if epoch == epochs - 1:
+            all_results[name]["true_labels"] = true_labels
+            all_results[name]["pred_labels"] = pred_labels
+            all_results[name]["errors"] = errors
+    
+    # Calcul de l'accuracy pour cet optimisateur (utiliser les prédictions stockées)
+    accuracy = np.mean(all_results[name]["pred_labels"] == all_results[name]["true_labels"]) * 100
+    all_results[name]["accuracy"] = accuracy
+    print(f"Précision {name} sur le jeu de validation : {accuracy:.2f}%")
     
     # Mise à jour des graphiques de comparaison après chaque optimisateur
     # Graphe comparatif 1: Loss dynamique (Train + Val)
@@ -183,30 +185,29 @@ for row_idx, (name, train_func) in enumerate(optimizers.items()):
     axes_comp[2].set_ylabel("Fréquence")
     axes_comp[2].legend()
     axes_comp[2].grid(True, alpha=0.3)
-    
-    fig_comp.tight_layout()
-    plt.pause(0.01)
+
+plt.tight_layout(pad=3.0)
+fig_comp.tight_layout()
 
 # --- Affichage dynamique des images ---
-fig_img, ax_img = plt.subplots(figsize=(3, 3))
-correct_count = 0
-nbf = X_val.shape[0]
+# fig_img, ax_img = plt.subplots(figsize=(3, 3))
+# correct_count = 0
+# nbf = X_val.shape[0]
 
-for idx in range(nbf):
-    image = X_val[idx].reshape(28, 28)
-    true_label = np.argmax(y_val[idx])
-    pred = nn.forward(X_val[idx].reshape(1, -1))
-    pred_label = np.argmax(pred)
-    if pred_label == true_label:
-        correct_count += 1
+# for idx in range(nbf):
+#     image = X_val[idx].reshape(28, 28)
+#     true_label = np.argmax(y_val[idx])
+#     pred = nn.forward(X_val[idx].reshape(1, -1))
+#     pred_label = np.argmax(pred)
+#     if pred_label == true_label:
+#         correct_count += 1
 
-    ax_img.clear()
-    ax_img.imshow(image, cmap="gray")
-    ax_img.set_title(f"Image {idx}/{nbf-1}\nVraie: {true_label}, Prédiction: {pred_label}")
-    ax_img.axis("off")
-    plt.pause(0.01)
+#     ax_img.clear()
+#     ax_img.imshow(image, cmap="gray")
+#     ax_img.set_title(f"Image {idx}/{nbf-1}\nVraie: {true_label}, Prédiction: {pred_label}")
+#     ax_img.axis("off")
+#     plt.pause(0.01)
 
-plt.ioff()
 plt.show()
 
-print(f"Précision sur le jeu de validation : {correct_count/nbf*100:.2f}%")
+# print(f"Précision sur le jeu de validation : {correct_count/nbf*100:.2f}%")
