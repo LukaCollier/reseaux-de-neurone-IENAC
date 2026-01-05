@@ -152,6 +152,10 @@ class Neural_Network:
         self.train_losses = []
         self.val_losses=[]
         self.loss=loss
+        self.loss_name=self.loss.replace("_", " ").upper()
+        self.n_input_init=n_input_init #ajout d'Étienne car plus facile pour désérialiser
+        self.nb_n_l=nb_n_l #ajout d'Étienne pour même raison que ligne au dessus 
+        self.activ=activ #ajout d'Étienne pour même raison que ligne au dessus 
         for i,nb_n in enumerate(nb_n_l):
             self.l.append(Layer(n_input,nb_n,activ[i]))
             n_input=nb_n
