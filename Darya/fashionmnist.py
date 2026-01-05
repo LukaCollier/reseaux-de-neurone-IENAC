@@ -1,3 +1,5 @@
+## attendu une accuracy de 89% vs si CNN on aurait 92-94%
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
