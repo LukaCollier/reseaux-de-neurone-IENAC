@@ -35,7 +35,7 @@ res_val = np.sin(v_val.flatten()).reshape(-1, 1)  # Shape: (500, 1)
 network.train_ADAM(v_entr, res_th, Epoch, lr, batch_size, v_val, res_val)
 train_losses = network.train_losses
 
-network.serialise("sine_ADAM_model")
+network.serialise_pkl("sine_ADAM_model")
 
 # Tracer la courbe de perte
 plt.figure(figsize=(15, 5))
