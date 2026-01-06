@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import src.Neuronev2 as Neurone
+from collections import defaultdict
+import src.Neurone as Neurone
 import src.Activation as Activation
 import os
 
-# --- Préparation des données ---
+# --- preparation of datas ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
@@ -23,7 +24,7 @@ X_train, X_val, y_train, y_val = train_test_split(
     X, y_encoded, test_size=0.2, random_state=42
 )
 
-# --- Initialisation du réseau ---
+# --- initialisation ---
 relu = Activation.ActivationF.relu()
 softmax = Activation.ActivationF.softmax()
 
@@ -34,11 +35,10 @@ nn = Neurone.Neural_Network(
     loss="cross_entropy"
 )
 
-# --- Paramètres d'entraînement ---
-epochs = 50
-batch_size = 32
+epochs = 15  # Réduire fortement
+batch_size = 64
 lr = 0.001
-lrSGD = 0.0001
+lrSGD = 0.001
 
 optimizers = {
     "ADAM": nn.train_ADAM,
@@ -46,167 +46,196 @@ optimizers = {
     "SGD": nn.train_SGD
 }
 
-# Couleurs pour chaque optimisateur
 colors = {
     "ADAM": "blue",
     "RMS": "green",
     "SGD": "orange"
 }
 
-# --- Figures pour les graphiques dynamiques ---
-plt.ion()
-fig, axes = plt.subplots(3, 3, figsize=(18, 12))
-fig.tight_layout(pad=3.0)
-for ax_row in axes:
-    for ax in ax_row:
-        ax.grid(True, alpha=0.3)
+# Dictionnaire pour stocker TOUT : courbes + prédictions
+results = {}
+n_classes = 10
 
-# --- NOUVELLE figure pour la comparaison ---
-fig_comp, axes_comp = plt.subplots(1, 3, figsize=(18, 5))
-fig_comp.suptitle('Comparaison des 3 optimisateurs', fontsize=16, fontweight='bold')
-fig_comp.tight_layout(pad=3.0)
-for ax in axes_comp:
-    ax.grid(True, alpha=0.3)
-
-# Dictionnaire pour stocker les résultats
-all_results = {
-    "ADAM": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None},
-    "RMS": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None},
-    "SGD": {"train_losses": [], "val_losses": [], "true_labels": None, "pred_labels": None, "errors": None}
-}
-
-# --- Boucle sur les optimisateurs ---
-for row_idx, (name, train_func) in enumerate(optimizers.items()):
+# =============================
+# ENTRAÎNEMENT ET ÉVALUATION POUR CHAQUE OPTIMISEUR
+# =============================
+for name, train_func in optimizers.items():
+    print(f"\n{'='*60}")
+    print(f"ENTRAÎNEMENT ET ÉVALUATION - {name}")
+    print(f"{'='*60}")
+    
     nn.cleanNetwork()
     train_losses = []
     val_losses = []
 
+    # Entraînement
+    print(f"Entraînement en cours...")
     for epoch in range(epochs):
         lr_current = lrSGD if name == "SGD" else lr
-        train_func(X_train, y_train, epochs=1, lr=lr_current, batch_size=batch_size,
-                   x_val=X_val, y_val=y_val)
+
+        train_func(
+            X_train, y_train,
+            epochs=1,
+            lr=lr_current,
+            batch_size=batch_size,
+            x_val=X_val,
+            y_val=y_val
+        )
 
         train_losses.append(nn.train_losses[-1])
         val_losses.append(nn.val_losses[-1])
         
-        # Stocker pour les graphiques de comparaison
-        all_results[name]["train_losses"] = train_losses.copy()
-        all_results[name]["val_losses"] = val_losses.copy()
+        if epoch % 10 == 0:
+            print(f"  Epoch {epoch}/{epochs} - Train Loss: {train_losses[-1]:.6f}, Val Loss: {val_losses[-1]:.6f}")
 
-        # ---- Graphe 1: Loss dynamique ----
-        ax1 = axes[row_idx, 0]
-        ax1.clear()
-        min_len = min(len(train_losses), len(val_losses))
-        ax1.plot(range(min_len), train_losses[:min_len], label="Train Loss", color="blue")
-        ax1.plot(range(min_len), val_losses[:min_len], label="Validation Loss", color="red")
-        ax1.set_title(f"{name} - Loss dynamique")
-        ax1.set_xlabel("Epoch")
-        ax1.set_ylabel("Loss")
-        ax1.set_yscale("log")
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
+    # Évaluation immédiate après l'entraînement
+    print("\nÉvaluation sur le jeu de validation...")
+    predictions = []
+    true_labels = []
 
-        # ---- Graphe 2: Prédiction vs réalité ----
-        ax2 = axes[row_idx, 1]
-        ax2.clear()
-        Y_val_pred = nn.forward(X_val)
-        true_labels = np.argmax(y_val, axis=1)
-        pred_labels = np.argmax(Y_val_pred, axis=1)
-        
-        n_samples = min(len(true_labels), len(pred_labels))
-        ax2.scatter(true_labels[:n_samples], pred_labels[:n_samples], alpha=0.6, color="blue", edgecolors="k", s=50)
-        ax2.plot([0, 9], [0, 9], "r--", linewidth=2, label="Prédiction parfaite")
-        ax2.set_title(f"{name} - Prédiction vs Réalité")
-        ax2.set_xlabel("Étiquette vraie")
-        ax2.set_ylabel("Étiquette prédite")
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
+    for idx in range(X_val.shape[0]):
+        pred = nn.forward(X_val[idx].reshape(1, -1))
+        pred_label = np.argmax(pred)
+        true_label = np.argmax(y_val[idx])
+        predictions.append(pred_label)
+        true_labels.append(true_label)
 
-        # ---- Graphe 3: Distribution des erreurs ----
-        ax3 = axes[row_idx, 2]
-        ax3.clear()
-        errors = np.abs(true_labels[:n_samples] - pred_labels[:n_samples])
-        ax3.hist(errors, bins=range(11), color="purple", alpha=0.7, edgecolor="black")
-        ax3.set_title(f"{name} - Distribution des erreurs")
-        ax3.set_xlabel(nn.loss_name)
-        ax3.set_ylabel("Fréquence")
-        ax3.grid(True, alpha=0.3)
-        
-        # Stocker les dernières prédictions
-        all_results[name]["true_labels"] = true_labels[:n_samples]
-        all_results[name]["pred_labels"] = pred_labels[:n_samples]
-        all_results[name]["errors"] = errors
+    # Calcul de la précision globale
+    accuracy = np.mean(np.array(predictions) == np.array(true_labels)) * 100
+    print(f"Précision finale : {accuracy:.2f}%")
 
-        plt.tight_layout(pad=3.0)
-        plt.pause(0.01)
-    
-    # Mise à jour des graphiques de comparaison après chaque optimisateur
-    # Graphe comparatif 1: Loss dynamique (Train + Val)
-    axes_comp[0].clear()
-    for opt_name in optimizers.keys():
-        if len(all_results[opt_name]["train_losses"]) > 0:
-            axes_comp[0].plot(range(len(all_results[opt_name]["train_losses"])), 
-                             all_results[opt_name]["train_losses"], 
-                             label=f"{opt_name} - Train", color=colors[opt_name], linewidth=2, linestyle='-')
-            axes_comp[0].plot(range(len(all_results[opt_name]["val_losses"])), 
-                             all_results[opt_name]["val_losses"], 
-                             label=f"{opt_name} - Val", color=colors[opt_name], linewidth=2, linestyle='--', alpha=0.7)
-    axes_comp[0].set_title("Loss dynamique - Comparaison", fontsize=14, fontweight='bold')
-    axes_comp[0].set_xlabel("Epoch")
-    axes_comp[0].set_ylabel("Loss")
-    axes_comp[0].set_yscale("log")
-    axes_comp[0].legend()
-    axes_comp[0].grid(True, alpha=0.3)
-    
-    # Graphe comparatif 2: Prédiction vs réalité
-    axes_comp[1].clear()
-    for opt_name in optimizers.keys():
-        if all_results[opt_name]["true_labels"] is not None:
-            axes_comp[1].scatter(all_results[opt_name]["true_labels"], 
-                               all_results[opt_name]["pred_labels"], 
-                               alpha=0.4, color=colors[opt_name], s=20, label=opt_name)
-    axes_comp[1].plot([0, 9], [0, 9], "r--", linewidth=2, label="Prédiction parfaite")
-    axes_comp[1].set_title("Prédiction vs Réalité - Comparaison", fontsize=14, fontweight='bold')
-    axes_comp[1].set_xlabel("Étiquette vraie")
-    axes_comp[1].set_ylabel("Étiquette prédite")
-    axes_comp[1].legend()
-    axes_comp[1].grid(True, alpha=0.3)
-    
-    # Graphe comparatif 3: Distribution des erreurs
-    axes_comp[2].clear()
-    for opt_name in optimizers.keys():
-        if all_results[opt_name]["errors"] is not None:
-            axes_comp[2].hist(all_results[opt_name]["errors"], bins=range(11), 
-                            color=colors[opt_name], alpha=0.5, edgecolor="black", label=opt_name)
-    axes_comp[2].set_title("Distribution des erreurs - Comparaison", fontsize=14, fontweight='bold')
-    axes_comp[2].set_xlabel("Erreur")
-    axes_comp[2].set_ylabel("Fréquence")
-    axes_comp[2].legend()
-    axes_comp[2].grid(True, alpha=0.3)
-    
-    fig_comp.tight_layout()
-    plt.pause(0.01)
+    # Création de la matrice de confusion
+    cm = np.zeros((n_classes, n_classes), dtype=int)
+    for true_label, pred_label in zip(true_labels, predictions):
+        cm[true_label, pred_label] += 1
 
-# --- Affichage dynamique des images ---
-fig_img, ax_img = plt.subplots(figsize=(3, 3))
-correct_count = 0
-nbf = X_val.shape[0]
+    # Stocker TOUT dans results
+    results[name] = {
+        'train_losses': train_losses,
+        'val_losses': val_losses,
+        'predictions': predictions,
+        'true_labels': true_labels,
+        'cm': cm,
+        'accuracy': accuracy
+    }
 
-for idx in range(nbf):
-    image = X_val[idx].reshape(28, 28)
-    true_label = np.argmax(y_val[idx])
-    pred = nn.forward(X_val[idx].reshape(1, -1))
-    pred_label = np.argmax(pred)
-    if pred_label == true_label:
-        correct_count += 1
+# =============================
+# AFFICHAGE DES GRAPHIQUES
+# =============================
 
-    ax_img.clear()
-    ax_img.imshow(image, cmap="gray")
-    ax_img.set_title(f"Image {idx}/{nbf-1}\nVraie: {true_label}, Prédiction: {pred_label}")
-    ax_img.axis("off")
-    plt.pause(0.01)
+# 1. GRAPHIQUE DES LOSSES
+print("\n" + "="*60)
+print("AFFICHAGE DES GRAPHIQUES")
+print("="*60)
 
-plt.ioff()
+plt.figure(figsize=(10, 6))
+plt.title("Comparaison des losses – Adam / RMSprop / SGD")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.yscale("log")
+plt.grid(True, alpha=0.3)
+
+for name in optimizers.keys():
+    plt.plot(results[name]['train_losses'], label=f"{name} - Train", color=colors[name])
+    plt.plot(results[name]['val_losses'], label=f"{name} - Val", color=colors[name], linestyle="--")
+
+plt.legend()
+plt.tight_layout()
 plt.show()
 
-print(f"Précision sur le jeu de validation : {correct_count/nbf*100:.2f}%")
+# 2. MATRICES DE CONFUSION POUR CHAQUE OPTIMISEUR
+for name in optimizers.keys():
+    print(f"\n{'='*60}")
+    print(f"RÉSULTATS DÉTAILLÉS - {name}")
+    print(f"{'='*60}")
+    
+    cm = results[name]['cm']
+    predictions = results[name]['predictions']
+    true_labels = results[name]['true_labels']
+    accuracy = results[name]['accuracy']
+    
+    print(f"\nPrécision finale : {accuracy:.2f}%")
+    print(f"Erreurs : {len(predictions) - int(accuracy * len(predictions) / 100)}/{len(predictions)}")
+
+    # Calcul des métriques par classe
+    print("\nMétriques par classe :")
+    print(f"{'Classe':<8} {'Précision':<12} {'Rappel':<12} {'F1-Score':<12} {'Support':<10}")
+    print("-" * 60)
+
+    for i in range(n_classes):
+        tp = cm[i, i]
+        fp = cm[:, i].sum() - tp
+        fn = cm[i, :].sum() - tp
+        
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+        support = cm[i, :].sum()
+        
+        print(f"{i:<8} {precision*100:>10.2f}% {recall*100:>10.2f}% {f1:>10.4f} {support:>10}")
+
+    # Visualisation de la matrice de confusion
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+    fig.suptitle(f'Matrices de confusion - {name} (Précision: {accuracy:.2f}%)', fontsize=16, fontweight='bold')
+
+    # Matrice de confusion avec valeurs absolues
+    im1 = axes[0].imshow(cm, cmap='Blues', interpolation='nearest')
+    axes[0].set_xticks(range(n_classes))
+    axes[0].set_yticks(range(n_classes))
+    axes[0].set_xlabel('Prédiction')
+    axes[0].set_ylabel('Vraie classe')
+    axes[0].set_title('Matrice de confusion (valeurs absolues)')
+
+    # Ajouter les valeurs dans les cellules
+    for i in range(n_classes):
+        for j in range(n_classes):
+            text_color = 'white' if cm[i, j] > cm.max() / 2 else 'black'
+            axes[0].text(j, i, str(cm[i, j]), ha='center', va='center', color=text_color)
+
+    plt.colorbar(im1, ax=axes[0], label='Nombre de prédictions')
+
+    # Matrice de confusion normalisée (par ligne)
+    cm_normalized = np.zeros_like(cm, dtype=float)
+    for i in range(n_classes):
+        row_sum = cm[i, :].sum()
+        if row_sum > 0:
+            cm_normalized[i, :] = cm[i, :] / row_sum
+
+    im2 = axes[1].imshow(cm_normalized, cmap='YlOrRd', interpolation='nearest', vmin=0, vmax=1)
+    axes[1].set_xticks(range(n_classes))
+    axes[1].set_yticks(range(n_classes))
+    axes[1].set_xlabel('Prédiction')
+    axes[1].set_ylabel('Vraie classe')
+    axes[1].set_title('Matrice de confusion (normalisée)')
+
+    # Ajouter les valeurs dans les cellules
+    for i in range(n_classes):
+        for j in range(n_classes):
+            text_color = 'white' if cm_normalized[i, j] > 0.5 else 'black'
+            axes[1].text(j, i, f'{cm_normalized[i, j]:.2f}', ha='center', va='center', color=text_color)
+
+    plt.colorbar(im2, ax=axes[1], label='Proportion')
+    plt.tight_layout()
+    plt.show()
+
+    # Analyse des confusions les plus fréquentes
+    print("\n" + "="*50)
+    print("Top 10 des confusions les plus fréquentes :")
+    print("="*50)
+
+    # Utiliser defaultdict pour compter les confusions
+    confusion_dict = defaultdict(int)
+    for true_label, pred_label in zip(true_labels, predictions):
+        if true_label != pred_label:
+            confusion_dict[(true_label, pred_label)] += 1
+
+    # Trier par fréquence
+    sorted_confusions = sorted(confusion_dict.items(), key=lambda x: x[1], reverse=True)
+
+    for idx, ((true_class, pred_class), count) in enumerate(sorted_confusions[:10], 1):
+        percentage = count / cm[true_class, :].sum() * 100
+        print(f"{idx:2d}. Vrai: {true_class} → Prédit: {pred_class} | {count:4d} fois ({percentage:5.2f}%)")
+
+print("\n" + "="*60)
+print("ANALYSE TERMINÉE")
+print("="*60)
