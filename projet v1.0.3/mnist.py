@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 from collections import defaultdict
 import src.Neurone as Neurone
 import src.Activation as Activation
@@ -11,18 +10,26 @@ import os
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 
-data = pd.read_csv("mnist.csv")
-X = data.iloc[:, 1:].values / 255.0
-y = data.iloc[:, 0].values
+# Chargement des données d'entraînement et de test depuis des fichiers séparés
+train_data = pd.read_csv("mnist_train.csv")
+test_data = pd.read_csv("mnist_test.csv")
+
+# Extraction des features et labels pour l'entraînement
+X_train = train_data.iloc[:, 1:].values / 255.0
+y_train_labels = train_data.iloc[:, 0].values
+
+# Extraction des features et labels pour le test
+X_test = test_data.iloc[:, 1:].values / 255.0
+y_test_labels = test_data.iloc[:, 0].values
 
 def one_hot_encode(y, n_classes=10):
     return np.eye(n_classes)[y]
 
-y_encoded = one_hot_encode(y)
+y_train = one_hot_encode(y_train_labels)
+y_test = one_hot_encode(y_test_labels)
 
-X_train, X_val, y_train, y_val = train_test_split(
-    X, y_encoded, test_size=0.2, random_state=42
-)
+print(f"Données d'entraînement : {X_train.shape[0]} exemples")
+print(f"Données de test : {X_test.shape[0]} exemples")
 
 # --- initialisation ---
 relu = Activation.ActivationF.relu()
@@ -35,10 +42,10 @@ nn = Neurone.Neural_Network(
     loss="cross_entropy"
 )
 
-epochs = 15  # Réduire fortement
-batch_size = 64
-lr = 0.001
-lrSGD = 0.001
+epochs =  20 #15
+batch_size = 128 #64
+lr = 0.0005 #0.001
+lrSGD = 0.0005 #0.001
 
 optimizers = {
     "ADAM": nn.train_ADAM,
@@ -66,7 +73,7 @@ for name, train_func in optimizers.items():
     
     nn.cleanNetwork()
     train_losses = []
-    val_losses = []
+    test_losses = []
 
     # Entraînement
     print(f"Entraînement en cours...")
@@ -78,31 +85,31 @@ for name, train_func in optimizers.items():
             epochs=1,
             lr=lr_current,
             batch_size=batch_size,
-            x_val=X_val,
-            y_val=y_val
+            x_val=X_test,
+            y_val=y_test
         )
 
         train_losses.append(nn.train_losses[-1])
-        val_losses.append(nn.val_losses[-1])
+        test_losses.append(nn.val_losses[-1])
         
-        if epoch % 10 == 0:
-            print(f"  Epoch {epoch}/{epochs} - Train Loss: {train_losses[-1]:.6f}, Val Loss: {val_losses[-1]:.6f}")
+        if epoch % 5 == 0 or epoch == epochs - 1:
+            print(f"  Epoch {epoch}/{epochs} - Train Loss: {train_losses[-1]:.6f}, Test Loss: {test_losses[-1]:.6f}")
 
     # Évaluation immédiate après l'entraînement
-    print("\nÉvaluation sur le jeu de validation...")
+    print("\nÉvaluation sur le jeu de test...")
     predictions = []
     true_labels = []
 
-    for idx in range(X_val.shape[0]):
-        pred = nn.forward(X_val[idx].reshape(1, -1))
+    for idx in range(X_test.shape[0]):
+        pred = nn.forward(X_test[idx].reshape(1, -1))
         pred_label = np.argmax(pred)
-        true_label = np.argmax(y_val[idx])
+        true_label = np.argmax(y_test[idx])
         predictions.append(pred_label)
         true_labels.append(true_label)
 
     # Calcul de la précision globale
     accuracy = np.mean(np.array(predictions) == np.array(true_labels)) * 100
-    print(f"Précision finale : {accuracy:.2f}%")
+    print(f"Précision finale sur le test set : {accuracy:.2f}%")
 
     # Création de la matrice de confusion
     cm = np.zeros((n_classes, n_classes), dtype=int)
@@ -112,7 +119,7 @@ for name, train_func in optimizers.items():
     # Stocker TOUT dans results
     results[name] = {
         'train_losses': train_losses,
-        'val_losses': val_losses,
+        'test_losses': test_losses,
         'predictions': predictions,
         'true_labels': true_labels,
         'cm': cm,
@@ -137,7 +144,7 @@ plt.grid(True, alpha=0.3)
 
 for name in optimizers.keys():
     plt.plot(results[name]['train_losses'], label=f"{name} - Train", color=colors[name])
-    plt.plot(results[name]['val_losses'], label=f"{name} - Val", color=colors[name], linestyle="--")
+    plt.plot(results[name]['test_losses'], label=f"{name} - Test", color=colors[name], linestyle="--")
 
 plt.legend()
 plt.tight_layout()

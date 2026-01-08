@@ -19,7 +19,6 @@ class Layer:
         self.n_input = n_input
         self.n_neurone = n_neurone
         self.biais = np.zeros(n_neurone)
-        
         # Initialisation adaptée selon la fonction d'activation
         if activ.name == "softmax":
             # Xavier pour softmax
@@ -27,7 +26,7 @@ class Layer:
         else:
             # He pour ReLU et autres
             self.w = np.random.randn(n_neurone, n_input) * np.sqrt(2.0 / n_input)
-        
+
         self.x = np.zeros(n_input)
         self.z = np.zeros(n_neurone)
         self.f = np.zeros(n_neurone)
@@ -109,12 +108,29 @@ class Layer:
         return self.f
 
     def cleanWB(self):
+        """Réinitialise les poids, biais ET tous les accumulateurs des optimiseurs"""
         self.biais = np.zeros(self.n_neurone)
+        
+        # Réinitialisation des poids selon l'activation
         if self.activ.name == "softmax":
             self.w = np.random.randn(self.n_neurone, self.n_input) * np.sqrt(1.0 / self.n_input)
         else:
             self.w = np.random.randn(self.n_neurone, self.n_input) * np.sqrt(2.0 / self.n_input)
-
+        
+        # 🔧 CORRECTION : Réinitialiser TOUS les accumulateurs
+        # Pour ADAM
+        self.m_w = np.zeros_like(self.w)
+        self.v_w = np.zeros_like(self.w)
+        self.m_b = np.zeros_like(self.biais)
+        self.v_b = np.zeros_like(self.biais)
+        
+        # Pour RMSProp
+        self.s_w = np.zeros_like(self.w)
+        self.s_b = np.zeros_like(self.biais)
+        
+        # Pour Momentum
+        self.vw_momentum = np.zeros_like(self.w)
+        self.vb_momentum = np.zeros_like(self.biais)
     def SGD_update(self, lr, g_w, g_b):
         self.w -= lr * g_w
         self.biais -= lr * g_b
