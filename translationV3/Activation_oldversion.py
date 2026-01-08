@@ -1,0 +1,89 @@
+import numpy as np
+# cls allows writing cls instead of ActivationF
+# Added by Étienne: new attribute `name` as a string containing the function name, useful for deserialization
+
+class ActivationF:
+    """
+    Activation functions class
+    """
+    def __init__(self, function, derivative,name): 
+        self.function = function
+        self.derivative = derivative
+        self.name=name #Added by Étienne: `name` = str containing the function name (useful for deserialization)
+
+        
+    @classmethod
+    def creation_with_name(cls,name): #Added by Étienne
+        if name=="sigmoid":
+            return cls.sigmoid()
+        if name=="relu":
+            return cls.relu()
+        if name=="leaky_relu":
+            return cls.leaky_relu()
+        if name=="tanh":
+            return cls.tanh()
+        
+    def __call__(self, x):
+        """allow to call the instance as a function"""
+        return self.function(x)
+    
+    @classmethod
+    def sigmoid(cls):
+        def sig(x):
+            return 1 / (1 + np.exp(-np.clip(x, -500, 500)))
+        
+        def sig_deriv(x):
+            s = sig(x)
+            return s * (1 - s)
+        
+        return cls(function=sig, derivative=sig_deriv,name="sigmoid") #Added by Étienne for name 
+    
+    @classmethod
+    def relu(cls):
+        return cls(
+            function=lambda x: np.maximum(0, x),
+            derivative=lambda x: (x > 0).astype(float),
+            name="relu" #Added by Étienne
+        )
+    
+    @classmethod
+    def leaky_relu(cls, alpha=0.1):
+        return cls(
+            function=lambda x: np.where(x > 0, x, alpha * x),
+            derivative=lambda x: np.where(x > 0, 1.0, alpha),
+            name="leaky_relu" #Added by Étienne 
+        )
+    
+    @classmethod
+    def tanh(cls):
+        def tanh_func(x):
+            return np.tanh(x)
+        
+        def tanh_deriv(x):
+            return 1 - np.tanh(x) ** 2
+        
+        return cls(function=tanh_func, derivative=tanh_deriv,name="tanh") #added by Étienne for name
+
+    @classmethod
+    def identity(cls):
+        def identity_func(x):
+            return x
+        
+        def identity_deriv(x):
+            return np.ones_like(x)
+        
+        return cls(function=identity_func, derivative=identity_deriv,name="identity") #Added by Luka Etienne (you forgot it)
+    
+    @classmethod
+    def softmax(cls):
+        def softmax_func(x):
+            x_shifted = x - np.max(x, axis=0, keepdims=True)
+            exp_x = np.exp(x_shifted)
+            return exp_x / np.sum(exp_x, axis=0, keepdims=True)
+
+        def softmax_deriv(x):
+            s = softmax_func(x)
+            return s * (1 - s)  # Approximate derivative (diagonal only)
+
+
+        return cls(function=softmax_func, derivative=softmax_deriv, name="softmax")
