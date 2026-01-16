@@ -22,7 +22,7 @@ class RegularisationF:
     #different regularisation functions
     @classmethod
     def L0(cls,lambda_regularisation):
-        def apply_l0(grad_w):
+        def apply_l0(w,grad_w):
             return grad_w
         return cls(function=apply_l0,name='L0',lambda_regularisation=0)
     
