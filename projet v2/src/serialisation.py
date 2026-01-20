@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 
-def serialise(name, data, mode='x'):
+def serialize(name, data, mode='x'):
     """
     name: filename without extension where data will be stored.
     data: object to store.
@@ -33,7 +33,7 @@ def decode_numpy(d):
         return arr.reshape(d["shape"])
     return d
 
-def deserialise(name):
+def deserialize(name):
     """
     name: filename without extension to load JSON data from.
     """

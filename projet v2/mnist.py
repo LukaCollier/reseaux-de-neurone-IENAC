@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
-import src.Neurone as Neurone
+import src.Neuron as Neurone
 import src.Activation as Activation
 import os
 

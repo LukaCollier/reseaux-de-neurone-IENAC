@@ -74,9 +74,9 @@ class Layer:
         }
     
 
-    def serialise(self, name):
+    def serialize(self, name):
         """Persist layer parameters to disk."""
-        serialisation.serialise(name, self.to_json())
+        serialisation.serialize(name, self.to_json())
     
 
     @classmethod
@@ -282,14 +282,14 @@ class Neural_Network:
         else:
             return self.MSE(y_pred, y)
 
-    def serialise_pkl(self, name, mode='xb'):
+    def serialize_pkl(self, name, mode='xb'):
         """Serialize the full network with pickle."""
-        serialisation_pkl.serialise_pkl(self, name, mode)
+        serialisation_pkl.serialize_pkl(self, name, mode)
         
     @classmethod       
-    def deserialise_pkl(cls, name):
+    def deserialize_pkl(cls, name):
         """Load a network serialized with pickle."""
-        return serialisation_pkl.deserialise_pkl(name)
+        return serialisation_pkl.deserialize_pkl(name)
 
 
     def optimizer(self, y, lr, method):
