@@ -1,7 +1,8 @@
 import numpy as np
 
 class RegularisationF:
-    
+    """Factory and container for regularization functions."""
+
     def __init__(self,function,name,lambda_regularisation):
         self.function=function
         self.name=name
@@ -9,7 +10,7 @@ class RegularisationF:
     
     @classmethod
     def creation_with_name(cls, name, lambda_regularisation):
-        """CORRECTION : Gestion complète de tous les cas avec exception"""
+        """Return the regularization function by name; raise on unknown."""
         mapping = {
             "L0": cls.L0,
             "L1": cls.L1,
@@ -17,19 +18,21 @@ class RegularisationF:
         }
         if name in mapping:
             return mapping[name](lambda_regularisation=lambda_regularisation)
-        raise ValueError(f"Fonction d'activation inconnue: {name}, veuillez choisir parmi {[name for name in mapping]}")
+        raise ValueError(f"Unknown regularization function: {name}, choose among {[name for name in mapping]}")
     
-    #different regularisation functions
+    # different regularisation functions
     @classmethod
     def L0(cls,lambda_regularisation):
+        """No regularization (pass-through gradients)."""
         def apply_l0(w,grad_w):
             return grad_w
         return cls(function=apply_l0,name='L0',lambda_regularisation=0)
     
     @classmethod
     def L1(cls,lambda_regularisation):
+        """L1 regularization added to weight gradients."""
         def apply_l1(w, grad_w):
-        #Apply L1 regularization to the weights only
+            # Apply L1 regularization to weights only
 
             if lambda_regularisation > 0.0:
                 grad_w = grad_w + lambda_regularisation * np.abs(w)
@@ -40,12 +43,12 @@ class RegularisationF:
     
     @classmethod
     def L2(cls,lambda_regularisation):
+        """L2 regularization added to weight gradients."""
         def apply_l2(w,grad_w):
-        #Apply L1 regularization to the weights only
+        # Apply L2 regularization to weights only
 
             if lambda_regularisation > 0.0:
                 grad_w = grad_w + lambda_regularisation * w**2
             return grad_w
     
         return cls(function=apply_l2,name='L2',lambda_regularisation=lambda_regularisation)
-    

@@ -6,7 +6,7 @@ import src.Neurone as Neurone
 import src.Activation as Activation
 from sklearn.model_selection import train_test_split
 
-# ===================== Chargement des données =====================
+# ===================== Data loading =====================
 script_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_dir)
 data = pd.read_csv("boston.csv")
@@ -18,7 +18,7 @@ Y = data['MEDV'].values.reshape(-1, 1)
 X_temp, X_test, Y_temp, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 X_train, X_val, Y_train, Y_val = train_test_split(X_temp, Y_temp, test_size=0.25, random_state=42)
 
-# ===================== Normalisation =====================
+# ===================== Normalization =====================
 mean_X = X_train.mean(axis=0)
 std_X = X_train.std(axis=0)
 X_train_norm = (X_train - mean_X) / (std_X + 1e-8)
@@ -31,13 +31,13 @@ Y_train_norm = (Y_train - mean_Y) / std_Y
 Y_val_norm = (Y_val - mean_Y) / std_Y
 Y_test_norm = (Y_test - mean_Y) / std_Y
 
-# ===================== Paramètres =====================
+# ===================== Parameters =====================
 Epoch = 400
 lr = 0.001
 lrSGD = 0.0001
 batch_size = 32
 
-# ===================== Réseau =====================
+# ===================== Network =====================
 activ_Relu = Activation.ActivationF.relu()
 activ_idd = Activation.ActivationF.identity()
 network = Neurone.Neural_Network(X_train_norm.shape[1], [16, 8, 1], [activ_Relu, activ_Relu, activ_idd])
@@ -48,11 +48,11 @@ optimizers = {
     "SGD": network.train_SGD
 }
 
-# Pour le graphique comparatif final
+# For the final comparison plot
 all_train_losses = {}
 all_val_losses = {}
 
-# ===================== Boucle sur les optimiseurs =====================
+# ===================== Loop over optimizers =====================
 for name, train_func in optimizers.items():
     network.cleanNetwork()
     print(f"\nEntraînement avec {name}...")
@@ -62,11 +62,11 @@ for name, train_func in optimizers.items():
     else:
         train_func(X_train_norm, Y_train_norm, Epoch, lr, batch_size, X_val_norm, Y_val_norm)
 
-    # Sauvegarde des losses pour le graphique final
+    # Save losses for final plot
     all_train_losses[name] = network.train_losses.copy()
     all_val_losses[name] = network.val_losses.copy()
 
-    # ===================== Prédictions =====================
+    # ===================== Predictions =====================
     Y_val_pred_norm = network.forward(X_val_norm)
     Y_val_pred = Y_val_pred_norm * std_Y + mean_Y
     Y_val_denorm = Y_val_norm * std_Y + mean_Y
@@ -75,10 +75,10 @@ for name, train_func in optimizers.items():
     Y_test_pred = Y_test_pred_norm * std_Y + mean_Y
     Y_test_denorm = Y_test_norm * std_Y + mean_Y
 
-    # ===================== Visualisation par optimiseur =====================
+    # ===================== Visualization per optimizer =====================
     plt.figure(figsize=(15, 5))
 
-    # 1) Courbes de loss
+    # 1) Loss curves
     plt.subplot(1, 3, 1)
     plt.plot(network.train_losses, label='Train Loss')
     plt.plot(network.val_losses, label='Validation Loss')
@@ -89,7 +89,7 @@ for name, train_func in optimizers.items():
     plt.grid(True, alpha=0.3)
     plt.legend()
 
-    # 2) Prédictions vs Réalité
+    # 2) Predictions vs Reality
     plt.subplot(1, 3, 2)
     plt.scatter(Y_val_denorm.flatten(), Y_val_pred.flatten(), alpha=0.6, edgecolors='k')
     plt.plot([Y_val_denorm.min(), Y_val_denorm.max()],
@@ -101,7 +101,7 @@ for name, train_func in optimizers.items():
     plt.grid(True, alpha=0.3)
     plt.legend()
 
-    # 3) Histogramme des erreurs
+    # 3) Error histogram
     plt.subplot(1, 3, 3)
     errors = np.abs(Y_val_denorm.flatten() - Y_val_pred.flatten())
     plt.hist(errors, bins=30, alpha=0.7)
@@ -113,7 +113,7 @@ for name, train_func in optimizers.items():
     plt.tight_layout()
     plt.show()
 
-    # ===================== Métriques =====================
+    # ===================== Metrics =====================
     print(f"\n{'='*50}")
     print(f"RÉSULTATS FINAUX ({name})")
     print(f"{'='*50}")
@@ -125,7 +125,7 @@ for name, train_func in optimizers.items():
 
     network.cleanNetwork()
 
-# ===================== GRAPHIQUE COMPARATIF FINAL =====================
+# ===================== Final comparison plot =====================
 plt.figure(figsize=(12, 7))
 
 for name in optimizers.keys():

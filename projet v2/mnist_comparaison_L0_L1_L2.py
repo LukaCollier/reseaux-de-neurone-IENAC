@@ -47,7 +47,7 @@ nn = Neurone.Neural_Network(
 
 
 epochs =  20 #15
-batch_size = 1 #64
+batch_size = 64 #64
 lr = 0.0005 #0.001
 lrSGD = 0.0005 #0.001
 lambda_regularisation=1e-3

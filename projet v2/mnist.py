@@ -6,19 +6,16 @@ import src.Neurone as Neurone
 import src.Activation as Activation
 import os
 
-# --- preparation of datas ---
-script_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_dir)
-
-# Chargement des données d'entraînement et de test depuis des fichiers séparés
+# --- data preparation ---
+# Load training and test data from separate files
 train_data = pd.read_csv("mnist_train.csv")
 test_data = pd.read_csv("mnist_test.csv")
 
-# Extraction des features et labels pour l'entraînement
+# Extract features and labels for training
 X_train = train_data.iloc[:, 1:].values / 255.0
 y_train_labels = train_data.iloc[:, 0].values
 
-# Extraction des features et labels pour le test
+# Extract features and labels for testing
 X_test = test_data.iloc[:, 1:].values / 255.0
 y_test_labels = test_data.iloc[:, 0].values
 
@@ -31,7 +28,7 @@ y_test = one_hot_encode(y_test_labels)
 print(f"Données d'entraînement : {X_train.shape[0]} exemples")
 print(f"Données de test : {X_test.shape[0]} exemples")
 
-# --- initialisation ---
+# --- initialization ---
 relu = Activation.ActivationF.relu()
 softmax = Activation.ActivationF.softmax()
 
@@ -59,12 +56,12 @@ colors = {
     "SGD": "orange"
 }
 
-# Dictionnaire pour stocker TOUT : courbes + prédictions
+# Dictionary to store everything: curves + predictions
 results = {}
 n_classes = 10
 
 # =============================
-# ENTRAÎNEMENT ET ÉVALUATION POUR CHAQUE OPTIMISEUR
+# TRAINING AND EVALUATION FOR EACH OPTIMIZER
 # =============================
 for name, train_func in optimizers.items():
     print(f"\n{'='*60}")
@@ -107,16 +104,16 @@ for name, train_func in optimizers.items():
         predictions.append(pred_label)
         true_labels.append(true_label)
 
-    # Calcul de la précision globale
+    # Calculate overall accuracy
     accuracy = np.mean(np.array(predictions) == np.array(true_labels)) * 100
     print(f"Précision finale sur le test set : {accuracy:.2f}%")
 
-    # Création de la matrice de confusion
+    # Create confusion matrix
     cm = np.zeros((n_classes, n_classes), dtype=int)
     for true_label, pred_label in zip(true_labels, predictions):
         cm[true_label, pred_label] += 1
 
-    # Stocker TOUT dans results
+    # Store everything in results
     results[name] = {
         'train_losses': train_losses,
         'test_losses': test_losses,
@@ -127,10 +124,10 @@ for name, train_func in optimizers.items():
     }
 
 # =============================
-# AFFICHAGE DES GRAPHIQUES
+# DISPLAYING GRAPHS
 # =============================
 
-# 1. GRAPHIQUE DES LOSSES
+# 1. LOSS GRAPH
 print("\n" + "="*60)
 print("AFFICHAGE DES GRAPHIQUES")
 print("="*60)
@@ -150,7 +147,7 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
-# 2. MATRICES DE CONFUSION POUR CHAQUE OPTIMISEUR
+# 2. CONFUSION MATRICES FOR EACH OPTIMIZER
 for name in optimizers.keys():
     print(f"\n{'='*60}")
     print(f"RÉSULTATS DÉTAILLÉS - {name}")
@@ -164,8 +161,8 @@ for name in optimizers.keys():
     print(f"\nPrécision finale : {accuracy:.2f}%")
     print(f"Erreurs : {len(predictions) - int(accuracy * len(predictions) / 100)}/{len(predictions)}")
 
-    # Calcul des métriques par classe
-    print("\nMétriques par classe :")
+    # Calculate metrics by class
+    print("\nMetrics by class:")
     print(f"{'Classe':<8} {'Précision':<12} {'Rappel':<12} {'F1-Score':<12} {'Support':<10}")
     print("-" * 60)
 
@@ -181,11 +178,11 @@ for name in optimizers.keys():
         
         print(f"{i:<8} {precision*100:>10.2f}% {recall*100:>10.2f}% {f1:>10.4f} {support:>10}")
 
-    # Visualisation de la matrice de confusion
+    # Visualize confusion matrix
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     fig.suptitle(f'Matrices de confusion - {name} (Précision: {accuracy:.2f}%)', fontsize=16, fontweight='bold')
 
-    # Matrice de confusion avec valeurs absolues
+    # Confusion matrix with absolute values
     im1 = axes[0].imshow(cm, cmap='Blues', interpolation='nearest')
     axes[0].set_xticks(range(n_classes))
     axes[0].set_yticks(range(n_classes))
@@ -193,7 +190,7 @@ for name in optimizers.keys():
     axes[0].set_ylabel('Vraie classe')
     axes[0].set_title('Matrice de confusion (valeurs absolues)')
 
-    # Ajouter les valeurs dans les cellules
+    # Add values to cells
     for i in range(n_classes):
         for j in range(n_classes):
             text_color = 'white' if cm[i, j] > cm.max() / 2 else 'black'
@@ -201,7 +198,7 @@ for name in optimizers.keys():
 
     plt.colorbar(im1, ax=axes[0], label='Nombre de prédictions')
 
-    # Matrice de confusion normalisée (par ligne)
+    # Normalized confusion matrix (by row)
     cm_normalized = np.zeros_like(cm, dtype=float)
     for i in range(n_classes):
         row_sum = cm[i, :].sum()
@@ -215,7 +212,7 @@ for name in optimizers.keys():
     axes[1].set_ylabel('Vraie classe')
     axes[1].set_title('Matrice de confusion (normalisée)')
 
-    # Ajouter les valeurs dans les cellules
+    # Add values to cells
     for i in range(n_classes):
         for j in range(n_classes):
             text_color = 'white' if cm_normalized[i, j] > 0.5 else 'black'
@@ -225,18 +222,18 @@ for name in optimizers.keys():
     plt.tight_layout()
     plt.show()
 
-    # Analyse des confusions les plus fréquentes
+    # Analysis of most frequent confusions
     print("\n" + "="*50)
-    print("Top 10 des confusions les plus fréquentes :")
+    print("Top 10 most frequent confusions:")
     print("="*50)
 
-    # Utiliser defaultdict pour compter les confusions
+    # Use defaultdict to count confusions
     confusion_dict = defaultdict(int)
     for true_label, pred_label in zip(true_labels, predictions):
         if true_label != pred_label:
             confusion_dict[(true_label, pred_label)] += 1
 
-    # Trier par fréquence
+    # Sort by frequency
     sorted_confusions = sorted(confusion_dict.items(), key=lambda x: x[1], reverse=True)
 
     for idx, ((true_class, pred_class), count) in enumerate(sorted_confusions[:10], 1):

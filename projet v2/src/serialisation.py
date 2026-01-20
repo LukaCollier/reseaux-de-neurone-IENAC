@@ -2,20 +2,20 @@ import json
 import numpy as np
 
 
-def serialise(name,data,mode='x'):
+def serialise(name, data, mode='x'):
     """
-    name=nom sans extension du fichier que l'on veut créer où on mettra les données stockées
-    data=donnée à stocker 
+    name: filename without extension where data will be stored.
+    data: object to store.
     """
-    try: #à voir s'il vaut mieux utiliser le mode 'w' en prenant le risque d'effacer des données ou si on conserve le mode 'x' 
-        with open(f"{name}.json",mode) as f: #ouverture en 'x' par mesure de sécurité pour éviter que des données utiles ne soient écrasées
-            json.dump(data,f,indent=4)
+    try:  # keep 'x' for safety to avoid overwriting useful data
+        with open(f"{name}.json", mode) as f:  # open in 'x' to avoid accidental overwrite
+            json.dump(data, f, indent=4)
     except FileExistsError:
-        print("Le fichier existe déja, il ne peut donc pas être modifié (mesure de sécurité pour ne pas écraser des données utiles)")
+        print("File already exists; it cannot be modified (safety to avoid overwriting useful data)")
 
-def encode_numpy(arr): 
+def encode_numpy(arr):
     """
-    arr=np.array type en entrée, renvoie un dictionnaire 
+    arr: np.array input, returns a dictionary for JSON serialization.
     """
     return {
         "__type__": "numpy.ndarray",
@@ -24,19 +24,19 @@ def encode_numpy(arr):
         "data": arr.tolist()
     }
 
-def decode_numpy(d): 
+def decode_numpy(d):
     """
-    d=dictionnaire en entrée  
+    d: dictionary input; reconstruct numpy array if encoded.
     """
     if d.get("__type__") == "numpy.ndarray":
         arr = np.array(d["data"], dtype=d["dtype"])
         return arr.reshape(d["shape"])
     return d
 
-def deserialise(name): 
+def deserialise(name):
     """
-    name=nom du fichier sans extension dont on veut extraire les infos 
+    name: filename without extension to load JSON data from.
     """
-    with open(f"{name}.json",'r') as f:
-        data=json.load(f)
+    with open(f"{name}.json", 'r') as f:
+        data = json.load(f)
         return data
