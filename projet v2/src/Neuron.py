@@ -5,19 +5,37 @@ from . import serialisation
 from . import regularisation
 
 class Layer:
-    '''
-    n_input: input size
-    n_neurone: number of neurons
-    bias: bias vector with |bias| = n_neurone
-    w: weight matrix
-    x: cached input
-    z: Wx + b result
-    f: activation output
-    activ: vector activation function
-    '''
+    """
+    A single layer in a neural network.
+    
+    Attributes:
+        n_input (int): Input size (number of features from previous layer)
+        n_neurone (int): Number of neurons in this layer
+        biais (ndarray): Bias vector with shape (n_neurone,)
+        w (ndarray): Weight matrix with shape (n_neurone, n_input)
+        x (ndarray): Cached input from forward pass
+        z (ndarray): Pre-activation values (W*x + b)
+        f (ndarray): Post-activation output
+        activ (ActivationF): Activation function for this layer
+        f_regularisation (RegularisationF): Regularization function
+        flag (bool): Flag for weight initialization strategy
+        m_w, v_w, m_b, v_b (ndarray): Adam optimizer momentum variables
+        s_w, s_b (ndarray): RMSProp optimizer cache variables
+        vw_momentum, vb_momentum (ndarray): Momentum optimizer velocity variables
+    """
 
     
     def __init__(self, n_input, n_neurone, activ, f_regularisation, flag=True):
+        """
+        Initialize a new layer with appropriate weight initialization.
+        
+        Args:
+            n_input (int): Number of input features
+            n_neurone (int): Number of neurons in this layer
+            activ (ActivationF): Activation function object
+            f_regularisation (RegularisationF): Regularization function object
+            flag (bool): If True, use smart initialization (Xavier/He), otherwise use standard random
+        """
         self.n_input = n_input
         self.n_neurone = n_neurone
         self.biais = np.zeros(n_neurone)
@@ -53,7 +71,12 @@ class Layer:
 
     
     def to_json(self):
-        """Serialize layer parameters and optimizer states to a JSON-serializable dict."""
+        """
+        Serialize layer parameters and optimizer states to a JSON-compatible dictionary.
+        
+        Returns:
+            dict: Dictionary containing all layer parameters and optimizer states
+        """
         return {
             "n_input": self.n_input,
             "n_neurone": self.n_neurone,
@@ -69,19 +92,32 @@ class Layer:
             "v_b": serialisation.encode_numpy(self.v_b),
             "s_w": serialisation.encode_numpy(self.s_w),
             "s_b": serialisation.encode_numpy(self.s_b),
-            "vw_momentum": serialisation.encode_numpy(self.vw_momentum),  # CORRECTION
-            "vb_momentum": serialisation.encode_numpy(self.vb_momentum)   # CORRECTION
+            "vw_momentum": serialisation.encode_numpy(self.vw_momentum),
+            "vb_momentum": serialisation.encode_numpy(self.vb_momentum)
         }
     
 
     def serialize(self, name):
-        """Persist layer parameters to disk."""
+        """
+        Save layer parameters to disk using JSON serialization.
+        
+        Args:
+            name (str): File path or name for the serialized layer
+        """
         serialisation.serialize(name, self.to_json())
     
 
     @classmethod
     def dict_to_layer(cls, d):
-        """Rebuild a Layer instance from a serialized dictionary."""
+        """
+        Reconstruct a Layer instance from a serialized dictionary.
+        
+        Args:
+            d (dict): Dictionary containing serialized layer parameters
+            
+        Returns:
+            Layer: Reconstructed layer instance with all parameters restored
+        """
         res = cls(d["n_input"],
                   d["n_neurone"],
                   Activation.ActivationF.creation_with_name(d["activ"]))
@@ -103,7 +139,18 @@ class Layer:
 
 
     def forward(self, x):
-        """Run forward pass; supports single sample or batch as columns."""
+        """
+        Perform forward propagation through this layer.
+        
+        Computes z = W*x + b and applies the activation function.
+        Supports both single samples and batches organized as columns.
+        
+        Args:
+            x (ndarray): Input data with shape (n_input,) or (n_input, batch_size)
+            
+        Returns:
+            ndarray: Activated output with shape (n_neurone, batch_size)
+        """
         # x must have shape: (n_input, batch_size) or (n_input, 1)
         self.x = np.array(x)
         
@@ -117,7 +164,12 @@ class Layer:
         return self.f
 
     def cleanWB(self):
-        """Reset weights, biases, and all optimizer accumulators."""
+        """
+        Reset all weights, biases, and optimizer state variables.
+        
+        Reinitializes weights using Xavier (for softmax) or He (for other activations).
+        Resets all momentum, velocity, and cache variables to zero.
+        """
         self.biais = np.zeros(self.n_neurone)
         
         # Weight reset depending on activation
@@ -140,14 +192,32 @@ class Layer:
         # For Momentum
         self.vw_momentum = np.zeros_like(self.w)
         self.vb_momentum = np.zeros_like(self.biais)
+        
     def SGD_update(self, lr, g_w, g_b):
-        """Vanilla SGD update."""
+        """
+        Update weights and biases using standard stochastic gradient descent.
+        
+        Args:
+            lr (float): Learning rate
+            g_w (ndarray): Weight gradients
+            g_b (ndarray): Bias gradients
+        """
         self.w -= lr * g_w
         self.biais -= lr * g_b
 
 
     def SGDMomentum_update(self, grad_w, grad_b, lr, momentum=0.9):
-        """SGD with momentum update."""
+        """
+        Update weights and biases using SGD with momentum.
+        
+        Accumulates a velocity vector in the direction of persistent reduction in loss.
+        
+        Args:
+            grad_w (ndarray): Weight gradients
+            grad_b (ndarray): Bias gradients
+            lr (float): Learning rate
+            momentum (float): Momentum coefficient (default: 0.9)
+        """
         # Update velocities (without lr)
         self.vw_momentum = momentum * self.vw_momentum + grad_w
         self.vb_momentum = momentum * self.vb_momentum + grad_b
@@ -158,7 +228,19 @@ class Layer:
 
 
     def RMS_update(self, grad_w, grad_b, lr, beta=0.9, epsilon=1e-8):
-        """RMSProp update."""
+        """
+        Update weights and biases using RMSProp optimizer.
+        
+        Maintains a moving average of squared gradients to normalize the gradient,
+        allowing for adaptive per-parameter learning rates.
+        
+        Args:
+            grad_w (ndarray): Weight gradients
+            grad_b (ndarray): Bias gradients
+            lr (float): Learning rate
+            beta (float): Decay rate for moving average (default: 0.9)
+            epsilon (float): Small constant for numerical stability (default: 1e-8)
+        """
         # Update moving averages of squared gradients
         self.s_w = beta * self.s_w + (1 - beta) * (grad_w ** 2)
         self.s_b = beta * self.s_b + (1 - beta) * (grad_b ** 2)
@@ -168,7 +250,20 @@ class Layer:
         self.biais -= lr * grad_b / (np.sqrt(self.s_b) + epsilon)
 
     def Adam_update(self, grad_w, grad_b, lr, t, beta1=0.9, beta2=0.999, epsilon=1e-8):
-        """Adam update with bias correction."""
+        """
+        Update weights and biases using the Adam optimizer.
+        
+        Combines momentum and RMSProp with bias correction for the initial timesteps.
+        
+        Args:
+            grad_w (ndarray): Weight gradients
+            grad_b (ndarray): Bias gradients
+            lr (float): Learning rate
+            t (int): Current timestep (used for bias correction)
+            beta1 (float): Exponential decay rate for first moment (default: 0.9)
+            beta2 (float): Exponential decay rate for second moment (default: 0.999)
+            epsilon (float): Small constant for numerical stability (default: 1e-8)
+        """
         # Update moments
         self.m_w = beta1 * self.m_w + (1 - beta1) * grad_w
         self.v_w = beta2 * self.v_w + (1 - beta2) * (grad_w ** 2)
@@ -188,18 +283,39 @@ class Layer:
         
         
 class Neural_Network:
-    '''
-    l: list of layers
-    a: list of activations with a[0] = input
-    nbl: number of layers
-    activ: activation functions per layer
-    ''' 
+    """
+    A fully connected feedforward neural network.
+    
+    Attributes:
+        l (list): List of Layer objects
+        a (list): List of activations from each layer (a[0] is the input)
+        nbl (int): Number of layers
+        activ (list): Activation functions for each layer
+        loss (str): Loss function name ("MSE" or "cross_entropy")
+        loss_name (str): Formatted loss function name for display
+        train_losses (list): Training loss history per epoch
+        val_losses (list): Validation loss history per epoch
+        t (int): Timestep counter for Adam optimizer
+        n_input_init (int): Initial input dimension
+        nb_n_l (list): Number of neurons per layer
+        f_regularisation (RegularisationF): Regularization function
+        flag (bool): Weight initialization flag
+    """
 
 
     def __init__(self, n_input_init, nb_n_l, activ, loss="MSE", name_regularisation="L0", lambda_regularisation=0, flag=True):
-        '''
-        If a single activation is provided, it is duplicated for all layers.
-        '''
+        """
+        Initialize a new neural network.
+        
+        Args:
+            n_input_init (int): Number of input features
+            nb_n_l (list): List of integers specifying neurons per layer
+            activ (ActivationF or list): Single activation for all layers or list of activations per layer
+            loss (str): Loss function ("MSE" or "cross_entropy", default: "MSE")
+            name_regularisation (str): Regularization type (default: "L0")
+            lambda_regularisation (float): Regularization strength (default: 0)
+            flag (bool): Use smart weight initialization (default: True)
+        """
         if isinstance(activ, Activation.ActivationF):
             # Avoid repeating the activation for networks with a single activation choice
             activ = [activ] * len(nb_n_l)
@@ -226,8 +342,18 @@ class Neural_Network:
 
         # For ADAM time step
         self.t = 0
+        
     def copy_with_regularisation_changes(self, n_f_regularisation, l_regularisation):
-        """Clone the network while changing regularisation type and strength."""
+        """
+        Create a copy of this network with different regularization settings.
+        
+        Args:
+            n_f_regularisation (str): New regularization function name
+            l_regularisation (float): New regularization strength
+            
+        Returns:
+            Neural_Network: New network instance with updated regularization
+        """
         res=Neural_Network(self.n_input_init,
                               self.nb_n_l,
                               self.activ[0],loss=self.loss,
@@ -239,7 +365,15 @@ class Neural_Network:
 
 
     def forward(self, x):
-        """Forward pass through all layers; returns output."""
+        """
+        Perform forward propagation through the entire network.
+        
+        Args:
+            x (ndarray): Input data with shape (batch_size, n_input) or (n_input,)
+            
+        Returns:
+            ndarray: Network output with shape (n_output, batch_size)
+        """
         x = np.array(x)
         # Convert x to shape (n_input, batch_size)
         if x.ndim == 1:
@@ -254,7 +388,11 @@ class Neural_Network:
         return x
 
     def cleanNetwork(self):
-        """Reset all layers and tracked losses/optimizer states."""
+        """
+        Reset the entire network to initial state.
+        
+        Resets all layer weights, biases, optimizer states, and clears training history.
+        """
         for lay in self.l:
             lay.cleanWB()
         self.train_losses = []
@@ -263,11 +401,29 @@ class Neural_Network:
 
 
     def MSE(self, y_pred, y):
-        """Mean squared error."""
+        """
+        Calculate mean squared error loss.
+        
+        Args:
+            y_pred (ndarray): Predicted values
+            y (ndarray): True values
+            
+        Returns:
+            float: Mean squared error
+        """
         return 0.5 * np.sum((y_pred - y) ** 2)
 
     def cross_entropy(self, y_pred, y):
-        """Cross-entropy loss for one-hot targets."""
+        """
+        Calculate cross-entropy loss for classification with one-hot encoded targets.
+        
+        Args:
+            y_pred (ndarray): Predicted probabilities with shape (n_output, batch_size)
+            y (ndarray): True one-hot encoded labels with shape (n_output, batch_size)
+            
+        Returns:
+            float: Cross-entropy loss averaged over the batch
+        """
         # y_pred: (n_output, batch_size), y: (n_output, batch_size) one-hot
         eps = 1e-12
         # Only clip the lower bound to avoid log(0)
@@ -276,24 +432,60 @@ class Neural_Network:
         return ce
 
     def get_loss_value(self, y_pred, y):
-        """Select proper loss function (cross-entropy or MSE)."""
+        """
+        Compute loss using the configured loss function.
+        
+        Args:
+            y_pred (ndarray): Predicted values
+            y (ndarray): True values
+            
+        Returns:
+            float: Loss value (cross-entropy or MSE based on configuration)
+        """
         if isinstance(self.loss, str) and self.loss.lower() == "cross_entropy":
             return self.cross_entropy(y_pred, y)
         else:
             return self.MSE(y_pred, y)
 
     def serialize_pkl(self, name, mode='xb'):
-        """Serialize the full network with pickle."""
+        """
+        Serialize the complete network using pickle.
+        
+        Args:
+            name (str): File path for the serialized network
+            mode (str): File opening mode (default: 'xb' for exclusive binary write)
+        """
         serialisation_pkl.serialize_pkl(self, name, mode)
         
     @classmethod       
     def deserialize_pkl(cls, name):
-        """Load a network serialized with pickle."""
+        """
+        Load a network from a pickle file.
+        
+        Args:
+            name (str): File path of the serialized network
+            
+        Returns:
+            Neural_Network: Deserialized network instance
+        """
         return serialisation_pkl.deserialize_pkl(name)
 
 
     def optimizer(self, y, lr, method):
-        """Backpropagation and parameter update using chosen optimizer."""
+        """
+        Perform backpropagation and update network parameters using the specified optimizer.
+        
+        Computes gradients via backpropagation and applies the chosen optimization algorithm
+        to update weights and biases across all layers.
+        
+        Args:
+            y (ndarray): True labels with shape (batch_size, n_output) or (n_output,)
+            lr (float): Learning rate
+            method (str): Optimizer name ("SGD", "SGDMomentum", "RMS", or "ADAM")
+            
+        Returns:
+            ndarray: Network predictions with shape (n_output, batch_size)
+        """
         y = np.array(y, dtype=float)
         # Convert y to shape (n_output, batch_size)
         if y.ndim == 1:
@@ -348,12 +540,27 @@ class Neural_Network:
             
 
     def train_loss(self, epoch_loss, num_batches):
-        """Store mean training loss for an epoch."""
+        """
+        Calculate and store the mean training loss for an epoch.
+        
+        Args:
+            epoch_loss (float): Total loss accumulated over all batches
+            num_batches (int): Number of batches processed
+        """
         train_loss = epoch_loss / num_batches
         self.train_losses.append(train_loss)
     
     def evaluate(self, x_test, y_test):
-        """Compute loss on a validation/test set."""
+        """
+        Evaluate the network on a test/validation dataset.
+        
+        Args:
+            x_test (ndarray): Test input data
+            y_test (ndarray): Test labels
+            
+        Returns:
+            float: Loss value on the test set
+        """
         y_pred = self.forward(x_test)  # y_pred aura shape (n_output, n_samples)
         # Convertir y_test en format (n_output, n_samples)
         y_test = np.array(y_test)
@@ -366,7 +573,23 @@ class Neural_Network:
     
     
     def train(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, method="SGD", verbose=False):
-        """Train the network with mini-batches and optional validation tracking."""
+        """
+        Train the neural network using mini-batch gradient descent.
+        
+        Performs multiple epochs of training with data shuffling, mini-batching,
+        and optional validation tracking.
+        
+        Args:
+            x_train (ndarray): Training input data with shape (n_samples, n_input)
+            y_train (ndarray): Training labels with shape (n_samples, n_output)
+            epochs (int): Number of training epochs
+            lr (float): Learning rate
+            batch_size (int): Number of samples per mini-batch
+            x_val (ndarray, optional): Validation input data
+            y_val (ndarray, optional): Validation labels
+            method (str): Optimizer to use ("SGD", "SGDMomentum", "RMS", or "ADAM", default: "SGD")
+            verbose (bool): Print training progress every 100 epochs (default: False)
+        """
         Nb_v_entr = x_train.shape[0]
         for k in range(epochs):
             if verbose and k % 100 == 0:
@@ -399,12 +622,15 @@ class Neural_Network:
                     print(f"  Train Loss: {self.train_losses[-1]:.6f}, Val Loss: {val_loss:.6f}")
 
                     
-# backward compatibility for training function names with older versions
+    # Backward compatibility wrapper methods for specific optimizers
     def train_RMS(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         self.train(x_train, y_train, epochs, lr, batch_size, x_val, y_val, method="RMS", verbose=verbose)
+        
     def train_ADAM(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         self.train(x_train, y_train, epochs, lr, batch_size, x_val, y_val, method="ADAM", verbose=verbose)
+        
     def train_SGDMomentum(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         self.train(x_train, y_train, epochs, lr, batch_size, x_val, y_val, method="SGDMomentum", verbose=verbose)
+        
     def train_SGD(self, x_train, y_train, epochs, lr, batch_size, x_val=None, y_val=None, verbose=False):
         self.train(x_train, y_train, epochs, lr, batch_size, x_val, y_val, method="SGD", verbose=verbose)

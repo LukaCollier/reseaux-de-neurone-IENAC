@@ -76,7 +76,9 @@ for epoch in range(epochs):
     
     if epoch % 5 == 0:
         print(f"  Epoch {epoch}/{epochs} - Train Loss: {train_losses[-1]:.6f}, Val Loss: {val_losses[-1]:.6f}")
+
 nn.serialize_pkl("fashion_mnist_adam_model")
+
 # =============================
 # EVALUATION ON VALIDATION SET
 # =============================
